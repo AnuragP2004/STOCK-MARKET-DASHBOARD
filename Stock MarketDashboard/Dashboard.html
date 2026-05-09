@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Stock Market Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.10.7/dayjs.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+
+        /* Premium Card Styles */
+        .stock-card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border: 1px solid #f3f4f6;
+        }
+
+        /* Stock List Item Styles */
+        .stock-item {
+            cursor: pointer;
+            padding: 12px 16px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f9fafb;
+        }
+
+        .stock-item:hover {
+            background-color: #f3f4f6;
+            transform: translateX(2px);
+        }
+
+        .stock-item.selected {
+            background-color: #eff6ff;
+            border-left: 4px solid #3b82f6;
+        }
+
+        /* Scrollbar styling for sleek look */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Chart & Utilities */
+        .fake-graph-container {
+            width: 100%;
+            height: 320px;
+            background: #fff;
+            position: relative;
+            padding: 10px 0;
+        }
+
+        .indicator-pill {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        /* Modal & Toasts */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(2px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 16px;
+            width: 95%;
+            max-width: 750px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        #tradeReceiptToast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+            z-index: 2000;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(100%);
+        }
+
+        #tradeReceiptToast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Spinners */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="p-2 md:p-6">
+
+    <!-- UPDATED WELCOME VIEW -->
+    <section id="welcomeView" class="min-h-[85vh] flex flex-col justify-center items-center text-center">
+        <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-[#1a202c] mb-2 tracking-tight">Welcome to the Stock
+            Market Simulator</h1>
+        <div class="text-5xl my-4">🚀</div>
+        <p class="text-lg text-gray-600 mb-8 font-medium">Start your trading journey with virtual cash!</p>
+        <button onclick="fetchMarketData()"
+            class="px-6 py-3 bg-[#10b981] text-white text-lg font-bold rounded-md hover:bg-[#059669] transition-colors shadow-md">
+            Fetch Stocks & Start Dashboard
+        </button>
+    </section>
+
+    <!-- DASHBOARD VIEW -->
+    <section id="dashboardView" class="hidden max-w-[1400px] mx-auto">
+
+        <!-- Header -->
+        <header
+            class="flex flex-col md:flex-row justify-between items-center mb-8 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <div>
+                <h1 class="text-2xl font-extrabold text-gray-800">Market Terminal</h1>
+                <p class="text-sm text-gray-500 font-medium">Live NSE/BSE Data Feed</p>
+            </div>
+            <div class="flex gap-3 mt-4 md:mt-0">
+                <button onclick="fetchMarketData()"
+                    class="px-5 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                        </path>
+                    </svg> Refresh
+                </button>
+                <button onclick="openPortfolioModal()"
+                    class="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg shadow hover:bg-blue-700 transition flex items-center gap-2">
+                    💼 My Portfolio
+                </button>
+            </div>
+        </header>
+
+        <!-- TOP INDICES (Horizontal) -->
+        <div id="top-indices" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="col-span-3 text-center py-4 text-gray-500 font-medium flex justify-center items-center gap-2">
+                <div class="loader"></div> Loading Market Indices...
+            </div>
+        </div>
+
+        <main class="grid grid-cols-1 xl:grid-cols-4 gap-8">
+
+            <!-- ================= LEFT COLUMN ================= -->
+            <div class="xl:col-span-1 flex flex-col gap-6">
+
+                <!-- Account Summary -->
+                <div class="p-5 stock-card border-t-4 border-blue-500">
+                    <h2 class="text-lg font-extrabold text-gray-800 mb-4">My Account Summary</h2>
+                    <div class="space-y-3 bg-gray-50 p-4 rounded-lg">
+                        <div class="flex justify-between items-center"><span
+                                class="text-xs font-bold text-gray-500 uppercase">Cash Balance</span><span
+                                id="quick-cash" class="font-black text-blue-700 text-lg">₹100,000.00</span></div>
+                        <div class="flex justify-between items-center"><span
+                                class="text-xs font-bold text-gray-500 uppercase">Holdings Value</span><span
+                                id="quick-holdings" class="font-bold text-gray-800">₹0.00</span></div>
+                        <div class="flex justify-between items-center border-t border-gray-200 pt-3 mt-1"><span
+                                class="text-xs font-bold text-gray-500 uppercase">Day's P&L</span><span id="quick-pl"
+                                class="font-bold">₹0.00</span></div>
+                    </div>
+                </div>
+
+                <!-- Top Gainers & Losers -->
+                <div class="p-5 stock-card">
+                    <h2 class="text-lg font-extrabold text-gray-800 mb-4">Top Gainers & Losers</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-green-50/50 p-3 rounded-lg border border-green-100">
+                            <h4 class="text-xs font-black text-green-700 uppercase mb-2 border-b border-green-200 pb-1">
+                                Gainers</h4>
+                            <div id="topGainersList" class="space-y-1.5"></div>
+                        </div>
+                        <div class="bg-red-50/50 p-3 rounded-lg border border-red-100">
+                            <h4 class="text-xs font-black text-red-700 uppercase mb-2 border-b border-red-200 pb-1">
+                                Losers</h4>
+                            <div id="topLosersList" class="space-y-1.5"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stock List -->
+                <div class="p-5 stock-card flex flex-col flex-grow h-[600px]">
+                    <h2 class="text-lg font-extrabold text-gray-800 mb-3">Watchlist</h2>
+                    <div class="relative mb-4">
+                        <input type="text" id="tickerInput"
+                            class="w-full bg-gray-50 border border-gray-200 rounded-lg pl-10 pr-4 py-2.5 text-sm font-medium outline-none focus:border-blue-500 focus:bg-white transition"
+                            placeholder="Search NSE Stocks...">
+                        <svg class="w-4 h-4 absolute left-3 top-3 text-gray-400" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <div id="listLoading" class="hidden flex justify-center py-4">
+                        <div class="loader"></div>
+                    </div>
+                    <div id="stockListContainer" class="flex-grow overflow-y-auto space-y-1 pr-1"></div>
+                </div>
+            </div>
+
+            <div id="detailView" class="xl:col-span-3 flex flex-col gap-6">
+
+                <div id="defaultDetailMessage"
+                    class="flex flex-col justify-center items-center h-full min-h-[600px] stock-card bg-gray-50/50 border-dashed border-2 border-gray-200">
+                    <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                        </path>
+                    </svg>
+                    <p class="text-xl font-bold text-gray-400">Select a stock to view Live Analysis</p>
+                </div>
+
+                <div id="detailLoading"
+                    class="hidden flex flex-col justify-center items-center h-full min-h-[600px] stock-card">
+                    <div class="loader !w-12 !h-12 !border-4 !border-blue-600 mb-4"></div>
+                    <p class="text-gray-500 font-semibold animate-pulse">Fetching Live Market Data & AI Signals...</p>
+                </div>
+
+                <div id="stockContent" class="hidden flex flex-col gap-6">
+
+                    <div class="p-6 stock-card">
+                        <div
+                            class="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-gray-100 pb-4 mb-4">
+                            <div>
+                                <div class="flex items-center gap-3 mb-1">
+                                    <h2 class="text-3xl font-black text-gray-900" id="tickerHeader"></h2>
+                                    <span
+                                        class="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded">NSE</span>
+                                </div>
+                                <p class="text-gray-500 font-medium text-lg" id="stockNameHeader"></p>
+                            </div>
+                            <div class="text-right mt-4 md:mt-0">
+                                <p class="text-4xl font-black text-gray-900">₹<span id="currentPrice"></span></p>
+                                <p class="text-lg font-bold mt-1"><span id="priceChange"></span></p>
+                            </div>
+                        </div>
+
+                        <!-- 52-Week Bar -->
+                        <div class="px-2">
+                            <div
+                                class="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                                <span id="low52WeekDisplay">Low: --</span>
+                                <span id="high52WeekDisplay">High: --</span>
+                            </div>
+                            <div class="relative h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div id="pricePosition"
+                                    class="absolute h-2.5 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full transition-all duration-1000"
+                                    style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. The Trading Box -->
+                    <div class="p-6 stock-card bg-blue-50/50 border border-blue-100 relative overflow-hidden">
+                        <div
+                            class="absolute top-0 right-0 w-32 h-32 bg-blue-100 rounded-full mix-blend-multiply filter blur-2xl opacity-50 translate-x-10 -translate-y-10">
+                        </div>
+                        <h3 class="text-lg font-extrabold text-gray-800 mb-4 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                            </svg>
+                            Trade <span id="trade-ticker" class="text-blue-600"></span>
+                        </h3>
+
+                        <div
+                            class="bg-white p-4 rounded-lg border border-blue-50 mb-4 flex justify-between items-center shadow-sm">
+                            <div>
+                                <p class="text-xs font-bold text-gray-400 uppercase">Your Holdings</p>
+                                <p class="text-xl font-black text-gray-800" id="user-shares">0</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs font-bold text-gray-400 uppercase">Avg. Cost</p>
+                                <p class="text-xl font-black text-gray-800" id="average-cost">₹0.00</p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row gap-4 items-end relative z-10">
+                            <div class="flex-1 w-full">
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Quantity to
+                                    Trade</label>
+                                <input type="number" id="trade-quantity" min="1" value="1"
+                                    class="w-full rounded-lg border border-gray-200 px-4 py-3 font-bold text-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition">
+                            </div>
+                            <button onclick="handleTrade('BUY')"
+                                class="w-full sm:w-auto px-10 py-3 bg-green-500 text-white font-extrabold rounded-lg shadow-lg shadow-green-500/30 hover:bg-green-600 transition transform hover:-translate-y-0.5">BUY</button>
+                            <button onclick="handleTrade('SELL')"
+                                class="w-full sm:w-auto px-10 py-3 bg-red-500 text-white font-extrabold rounded-lg shadow-lg shadow-red-500/30 hover:bg-red-600 transition transform hover:-translate-y-0.5">SELL</button>
+                        </div>
+                        <div id="trade-message" class="mt-4 p-3 rounded-lg bg-white/60 border border-white text-sm">
+                        </div>
+                    </div>
+
+                    <!-- 3. Live Chart -->
+                    <div class="p-6 stock-card">
+                        <h3 class="text-lg font-extrabold text-gray-800 mb-4">Historical Performance (Live 6M)</h3>
+                        <div class="fake-graph-container"><canvas id="stockChart"></canvas></div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                        <!-- Tech Stats -->
+                        <div class="p-6 stock-card border border-gray-100">
+                            <h3 class="font-extrabold text-gray-800 mb-5 flex items-center gap-2">⚙️ C++ Engine Stats
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg"><span
+                                        class="text-sm font-bold text-gray-600">RSI (14)</span><span id="indicator-rsi"
+                                        class="indicator-pill"></span></div>
+                                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg"><span
+                                        class="text-sm font-bold text-gray-600">MACD Signal</span><span
+                                        id="indicator-macd" class="indicator-pill"></span></div>
+                                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg"><span
+                                        class="text-sm font-bold text-gray-600">Volatility (ATR)</span><span
+                                        id="indicator-atr" class="indicator-pill bg-gray-200 text-gray-800"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Signal -->
+                        <div
+                            class="p-6 stock-card bg-gradient-to-br from-gray-900 to-gray-800 border-none text-center flex flex-col justify-center items-center relative overflow-hidden shadow-xl">
+                            <div
+                                class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+')] opacity-20">
+                            </div>
+                            <h3 class="font-black text-gray-400 uppercase tracking-[0.2em] mb-4 relative z-10 text-xs">
+                                AI Trading Signal</h3>
+                            <div id="aiSignalBox" class="text-6xl font-black text-white relative z-10 drop-shadow-lg">
+                                WAITING</div>
+                        </div>
+
+                    </div>
+
+                    <!-- 5. Market Volume & Detailed Analysis Text -->
+                    <div class="p-6 stock-card">
+                        <h3 class="text-lg font-extrabold text-gray-800 mb-4">Market Activity (Volume)</h3>
+                        <div class="bg-gray-50 p-5 rounded-xl border border-gray-100 mb-8">
+                            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Buy vs. Sell Volume
+                                Pressure (Mock)</p>
+                            <div id="volumeBar" class="flex w-full h-5 rounded-full overflow-hidden shadow-inner"></div>
+                            <div class="flex justify-between text-sm font-bold mt-2">
+                                <span id="buyVolumeLabel" class="text-green-600"></span>
+                                <span id="sellVolumeLabel" class="text-red-600"></span>
+                            </div>
+                        </div>
+
+                        <!-- Technical Analysis Text Block -->
+                        <h3 class="text-lg font-extrabold text-gray-800 mb-4">Technical Analysis (Report)</h3>
+                        <div id="analysisText"
+                            class="text-gray-700 text-sm leading-relaxed space-y-3 bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Bottom Meta Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-gray-800 text-sm p-6 stock-card bg-gray-50">
+                        <div>
+                            <p class="text-xs font-bold text-gray-500 uppercase mb-1">Market Cap</p>
+                            <p class="font-black" id="marketCap"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-500 uppercase mb-1">Volume</p>
+                            <p class="font-black" id="volume"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-500 uppercase mb-1">P/E Ratio</p>
+                            <p class="font-black" id="peRatio"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-500 uppercase mb-1">EPS (TTM)</p>
+                            <p class="font-black" id="eps"></p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </section>
+
+    <!-- ================= PORTFOLIO MODAL ================= -->
+    <div id="portfolioModal" class="modal-overlay hidden">
+        <div class="modal-content relative">
+            <button onclick="closePortfolioModal()"
+                class="absolute top-5 right-5 text-gray-400 hover:text-gray-900 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center transition">&times;</button>
+            <h2 class="text-2xl font-black text-gray-900 mb-6 flex items-center gap-2">💼 My Portfolio</h2>
+
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 rounded-xl mb-4 shadow-lg text-white">
+                <p class="text-blue-100 font-bold uppercase text-xs tracking-wider mb-1">Available Cash</p>
+                <p class="text-4xl font-black tracking-tight" id="modal-cash">₹100,000.00</p>
+            </div>
+
+            <div class="bg-gray-50 p-5 rounded-xl border border-gray-200 mb-6 flex justify-between items-center">
+                <div>
+                    <p class="text-gray-500 font-bold text-xs uppercase mb-1">Holdings Value</p>
+                    <b id="modal-holdings" class="text-xl text-gray-900">₹0.00</b>
+                </div>
+                <div class="text-right">
+                    <p class="text-gray-500 font-bold text-xs uppercase mb-1">Net P&L</p>
+                    <span id="modal-netpl" class="text-xl font-black">₹0.00</span>
+                </div>
+            </div>
+
+            <h3 class="text-sm font-bold text-gray-800 uppercase mb-3 px-1 border-b border-gray-200 pb-2">Active
+                Holdings</h3>
+            <div id="portfolio-holdings" class="space-y-2 text-sm max-h-40 overflow-y-auto mb-6 px-1"></div>
+
+            <h3 class="text-sm font-bold text-gray-800 uppercase mb-3 px-1 border-b border-gray-200 pb-2">Transaction
+                History</h3>
+            <div id="transaction-history"
+                class="space-y-2 text-xs max-h-48 overflow-y-auto bg-gray-50 p-4 rounded-xl border border-gray-100 mb-6">
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="handleDeposit()"
+                    class="flex-1 px-4 py-3.5 bg-gray-900 text-white font-bold rounded-lg shadow-md hover:bg-gray-800 transition">Add
+                    Funds</button>
+                <button onclick="handleReset()"
+                    class="flex-1 px-4 py-3.5 bg-red-50 text-red-600 font-bold rounded-lg border border-red-200 hover:bg-red-100 transition">Reset
+                    Account</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION FOR P&L -->
+    <div id="tradeReceiptToast"></div>
+
+    <!-- ================= JAVASCRIPT LOGIC ================= -->
+    <script>
+        let userCash = 100000.00;
+        let userPortfolio = {};
+        let transactionLog = [];
+        let allStocks = [];
+        let selectedStock = null;
+        let chartInstance = null;
+
+        const formatRp = (num) => "₹" + parseFloat(num).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        const getPnlClass = (val) => val > 0 ? 'text-green-500' : (val < 0 ? 'text-red-500' : 'text-gray-500');
+
+        // INIT
+        window.onload = () => {
+            const saved = JSON.parse(localStorage.getItem('proStockData'));
+            if (saved) { userCash = saved.cash; userPortfolio = saved.portfolio; transactionLog = saved.transactions || []; }
+            updatePortfolioUI();
+        };
+
+        const saveData = () => {
+            localStorage.setItem('proStockData', JSON.stringify({ cash: userCash, portfolio: userPortfolio, transactions: transactionLog }));
+            updatePortfolioUI();
+        };
+
+        // FETCH MARKET DATA (Indices & Stocks)
+        async function fetchMarketData() {
+            document.getElementById('welcomeView').classList.add('hidden');
+            document.getElementById('dashboardView').classList.remove('hidden');
+            document.getElementById('listLoading').classList.remove('hidden');
+            document.getElementById('stockListContainer').innerHTML = ''; // Clear old
+
+            try {
+                const res = await fetch('/api/market_data');
+                const data = await res.json();
+
+                // OPTIMIZATION FIX: Use a string builder instead of modifying innerHTML inside the loop (prevents slow rendering)
+                const idxDiv = document.getElementById('top-indices');
+                let indicesHTML = '';
+                data.indices.forEach(idx => {
+                    const cl = getPnlClass(idx.change);
+                    indicesHTML += `
+                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center transition hover:shadow-md">
+                            <div>
+                                <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-1">${idx.company}</h3>
+                                <p class="text-2xl font-black text-gray-900">${formatRp(idx.currentPrice)}</p>
+                            </div>
+                            <div class="text-right bg-gray-50 p-2 rounded-lg">
+                                <p class="text-sm font-black ${cl}">${idx.change > 0 ? '▲' : '▼'} ${Math.abs(idx.change)}</p>
+                                <p class="text-xs font-bold ${cl}">(${idx.changePercent}%)</p>
+                            </div>
+                        </div>`;
+                });
+                idxDiv.innerHTML = indicesHTML; // Update DOM only once
+
+                allStocks = data.stocks;
+                renderStockList(allStocks);
+                renderGainersLosers(allStocks);
+            } catch (err) { alert("Backend Error. Make sure python app.py is running!"); }
+            document.getElementById('listLoading').classList.add('hidden');
+        }
+
+        // SEARCH & RENDER STOCKS
+        document.getElementById('tickerInput').oninput = (e) => {
+            const term = e.target.value.toLowerCase();
+            renderStockList(allStocks.filter(s => s.ticker.toLowerCase().includes(term) || s.company.toLowerCase().includes(term)));
+        };
+
+        function renderStockList(stocks) {
+            const container = document.getElementById('stockListContainer');
+            // OPTIMIZATION FIX: Use a string builder to prevent DOM thrashing
+            let listHTML = '';
+            stocks.forEach(stock => {
+                const cl = getPnlClass(stock.change);
+                const isSelected = selectedStock && selectedStock.ticker === stock.ticker ? 'selected' : '';
+                listHTML += `
+                    <div class="stock-item ${isSelected}" onclick="fetchStockDetails('${stock.ticker}', this)">
+                        <div>
+                            <p class="font-extrabold text-sm text-gray-900">${stock.ticker}</p>
+                            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mt-0.5">${stock.company.substring(0, 16)}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-sm text-gray-900">${formatRp(stock.currentPrice)}</p>
+                            <p class="text-xs font-black ${cl} bg-${stock.change > 0 ? 'green' : 'red'}-50 inline-block px-1.5 py-0.5 rounded mt-1">${stock.change > 0 ? '+' : ''}${stock.changePercent}%</p>
+                        </div>
+                    </div>`;
+            });
+            container.innerHTML = listHTML; // Update DOM only once
+        }
+
+        function renderGainersLosers(stocks) {
+            const sorted = [...stocks].sort((a, b) => b.changePercent - a.changePercent);
+            document.getElementById('topGainersList').innerHTML = sorted.slice(0, 3).map(s => `
+                <div class="flex justify-between items-center text-xs font-bold">
+                    <span class="text-gray-800">${s.ticker}</span> <span class="text-green-600 bg-green-100 px-1.5 py-0.5 rounded">+${s.changePercent}%</span>
+                </div>`).join('');
+            document.getElementById('topLosersList').innerHTML = sorted.slice(-3).reverse().map(s => `
+                <div class="flex justify-between items-center text-xs font-bold">
+                    <span class="text-gray-800">${s.ticker}</span> <span class="text-red-600 bg-red-100 px-1.5 py-0.5 rounded">${s.changePercent}%</span>
+                </div>`).join('');
+        }
+
+        // FETCH DETAIL & CHART
+        async function fetchStockDetails(ticker, element) {
+            document.querySelectorAll('.stock-item').forEach(el => el.classList.remove('selected'));
+            if (element) element.classList.add('selected');
+
+            selectedStock = allStocks.find(s => s.ticker === ticker);
+            document.getElementById('defaultDetailMessage').classList.add('hidden');
+            document.getElementById('stockContent').classList.add('hidden');
+            document.getElementById('detailLoading').classList.remove('hidden');
+
+            try {
+                // 1. Fetch live data
+                const resLive = await fetch(`/api/live/${ticker}`);
+                const liveData = await resLive.json();
+                if (liveData.error) throw new Error(liveData.error);
+
+                // Update UI Headers
+                document.getElementById('stockNameHeader').textContent = selectedStock.company;
+                document.getElementById('tickerHeader').textContent = ticker;
+                document.getElementById('trade-ticker').textContent = ticker;
+                selectedStock.currentPrice = liveData.currentPrice;
+                document.getElementById('currentPrice').textContent = liveData.currentPrice;
+
+                const diff = liveData.currentPrice - liveData.historicalData[0].y;
+                const pct = (diff / liveData.historicalData[0].y) * 100;
+                const isPositive = diff >= 0;
+
+                const changeObj = document.getElementById('priceChange');
+                changeObj.innerHTML = `${isPositive ? '<span class="text-green-500">▲</span>' : '<span class="text-red-500">▼</span>'} ${Math.abs(diff).toFixed(2)} (${pct.toFixed(2)}%)`;
+                changeObj.className = "font-bold " + getPnlClass(diff);
+
+                // Update Meta & 52-Week
+                document.getElementById('marketCap').textContent = (selectedStock.marketCap / 10000000).toFixed(2) + " Cr";
+                document.getElementById('volume').textContent = selectedStock.volume.toLocaleString();
+                document.getElementById('peRatio').textContent = (Math.random() * 20 + 10).toFixed(2);
+                document.getElementById('eps').textContent = (Math.random() * 50).toFixed(2);
+
+                const high = selectedStock.high52Week; const low = selectedStock.low52Week;
+                document.getElementById('low52WeekDisplay').textContent = "Low: " + formatRp(low);
+                document.getElementById('high52WeekDisplay').textContent = "High: " + formatRp(high);
+                document.getElementById('pricePosition').style.width = Math.min(100, Math.max(0, ((liveData.currentPrice - low) / (high - low)) * 100)) + "%";
+
+                // Update Volume Bar
+                const buyPct = Math.random() * 40 + 30;
+                document.getElementById('volumeBar').innerHTML = `<div class="bg-green-500 h-full" style="width:${buyPct}%"></div><div class="bg-red-500 h-full" style="width:${100 - buyPct}%"></div>`;
+                document.getElementById('buyVolumeLabel').innerHTML = `Buy Vol<br><span class="text-lg">${Math.floor(selectedStock.volume * (buyPct / 100)).toLocaleString()}</span>`;
+                document.getElementById('sellVolumeLabel').innerHTML = `<div class="text-right">Sell Vol<br><span class="text-lg">${Math.floor(selectedStock.volume * (1 - buyPct / 100)).toLocaleString()}</span></div>`;
+
+                // Render Chart WITH DATES ON X-AXIS
+                const ctx = document.getElementById('stockChart').getContext('2d');
+                if (chartInstance) chartInstance.destroy();
+                chartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: liveData.historicalData.map(d => dayjs(d.x).format('DD MMM')),
+                        datasets: [{
+                            data: liveData.historicalData.map(d => d.y),
+                            borderColor: isPositive ? '#10b981' : '#ef4444',
+                            borderWidth: 2, fill: true,
+                            backgroundColor: isPositive ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)',
+                            pointRadius: 0,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false }, tooltip: { intersect: false } },
+                        scales: {
+                            x: {
+                                display: true,
+                                grid: { display: false },
+                                ticks: { maxTicksLimit: 8, font: { size: 10, family: 'Inter' } }
+                            },
+                            y: { grid: { color: '#f3f4f6' } }
+                        }
+                    }
+                });
+
+                // 2. Fetch AI Signals & C++
+                const resAnalyze = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prices: liveData.raw_prices }) });
+                const ai = await resAnalyze.json();
+
+                // Update Engine Stats
+                const rsiEl = document.getElementById('indicator-rsi');
+                rsiEl.textContent = ai.rsi ? ai.rsi.toFixed(2) : "--";
+                rsiEl.className = "indicator-pill " + (ai.rsi > 70 ? 'bg-red-100 text-red-700' : (ai.rsi < 30 ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-800'));
+
+                const macdEl = document.getElementById('indicator-macd');
+                macdEl.textContent = ai.macd ? (ai.macd > 0 ? "BULLISH" : "BEARISH") : "--";
+                macdEl.className = "indicator-pill " + (ai.macd > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700');
+
+                document.getElementById('indicator-atr').textContent = ai.volatility ? `₹${ai.volatility.toFixed(2)}` : "--";
+
+                // Update AI Box
+                const aiBox = document.getElementById('aiSignalBox');
+                aiBox.textContent = ai.final_signal || "ERR";
+                aiBox.className = "text-6xl font-black relative z-10 drop-shadow-lg " + (ai.final_signal === 'BUY' ? 'text-green-400' : (ai.final_signal === 'SELL' ? 'text-red-500' : 'text-gray-300'));
+
+                // Update Technical Analysis Text Report
+                generateAnalysisText(pct, ai.volatility, liveData.currentPrice);
+
+                updateTradeUI();
+
+                document.getElementById('detailLoading').classList.add('hidden');
+                document.getElementById('stockContent').classList.remove('hidden');
+
+            } catch (e) {
+                alert("Failed to load chart data for this stock. Try another.");
+                document.getElementById('detailLoading').classList.add('hidden');
+                document.getElementById('defaultDetailMessage').classList.remove('hidden');
+            }
+        }
+
+        function generateAnalysisText(pct, vol, currentPrice) {
+            const trend = pct > 2 ? 'strong upward trend (Buy Signal)' : (pct < -2 ? 'strong downward trend (Sell Signal)' : 'neutral/sideways trend (Hold)');
+            const risk = vol > (currentPrice * 0.03) ? 'high-risk' : 'moderate-risk';
+            const support = currentPrice * 0.94;
+            const resistance = currentPrice * 1.06;
+
+            const html = `
+                <p><strong>Overall Trend:</strong> Based on the last 6 months, the stock shows a <strong>${trend}</strong>. The current price is ${Math.abs(pct).toFixed(2)}% ${pct >= 0 ? 'above' : 'below'} its starting price.</p>
+                <p><strong>Volatility (Risk):</strong> The stock's price exhibits a standard deviation of ₹${vol.toFixed(2)}, suggesting a <strong>${risk}</strong> profile for traders.</p>
+                <p><strong>Key Levels:</strong> Nearest <strong>Support</strong> is found at <strong>${formatRp(support)}</strong> and <strong>Resistance</strong> at <strong>${formatRp(resistance)}</strong>.</p>
+            `;
+            document.getElementById('analysisText').innerHTML = html;
+        }
+
+        // --- TRADING LOGIC WITH PROFIT/LOSS CALCULATION ---
+        function getAvgCost(ticker) {
+            const buys = transactionLog.filter(t => t.ticker === ticker && t.type === 'BUY');
+            const totalShares = buys.reduce((sum, t) => sum + t.qty, 0);
+            const totalCost = buys.reduce((sum, t) => sum + (t.qty * t.price), 0);
+            return totalShares ? (totalCost / totalShares) : 0;
+        }
+
+        document.getElementById('trade-quantity').oninput = updateTradeUI;
+
+        function updateTradeUI() {
+            if (!selectedStock) return;
+            const qty = parseInt(document.getElementById('trade-quantity').value) || 0;
+            const cost = qty * selectedStock.currentPrice;
+            const msg = document.getElementById('trade-message');
+            const held = userPortfolio[selectedStock.ticker] || 0;
+
+            document.getElementById('user-shares').textContent = held;
+            document.getElementById('average-cost').textContent = held ? formatRp(getAvgCost(selectedStock.ticker)) : "₹0.00";
+
+            if (cost > userCash && qty > 0) {
+                msg.innerHTML = `❌ <span class="font-bold text-red-600">Insufficient Funds!</span> Need ${formatRp(cost - userCash)} more.`;
+            } else if (qty > 0) {
+                msg.innerHTML = `✅ <span class="font-bold text-green-700">Est. Cost: ${formatRp(cost)}</span>. Remaining Cash: ${formatRp(userCash - cost)}.`;
+            } else {
+                msg.innerHTML = "";
+            }
+            if (held === 0) msg.innerHTML += `<br>⚠️ <span class="font-bold text-yellow-600">SELL Error: You hold 0 shares.</span>`;
+        }
+
+        function handleTrade(type) {
+            if (!selectedStock) return;
+            const qty = parseInt(document.getElementById('trade-quantity').value) || 0;
+            if (qty <= 0) return;
+
+            const price = selectedStock.currentPrice;
+            const total = qty * price;
+
+            if (type === 'BUY') {
+                if (total > userCash) return alert("Not enough cash!");
+                userCash -= total;
+                userPortfolio[selectedStock.ticker] = (userPortfolio[selectedStock.ticker] || 0) + qty;
+                transactionLog.push({ date: dayjs().format('YYYY-MM-DD HH:mm:ss'), type: 'BUY', ticker: selectedStock.ticker, qty, price });
+
+                showToast(`BUY CONFIRMED<br><span class="text-sm font-normal">${qty} shares of ${selectedStock.ticker} bought at ${formatRp(price)}. Total: ${formatRp(total)}</span>`, true);
+
+            } else {
+                const held = userPortfolio[selectedStock.ticker] || 0;
+                if (qty > held) return alert("Not enough shares to sell!");
+
+                const avgCost = getAvgCost(selectedStock.ticker);
+                const profitLoss = (price * qty) - (avgCost * qty);
+
+                userCash += total;
+                userPortfolio[selectedStock.ticker] -= qty;
+                if (userPortfolio[selectedStock.ticker] === 0) delete userPortfolio[selectedStock.ticker];
+
+                transactionLog.push({ date: dayjs().format('YYYY-MM-DD HH:mm:ss'), type: 'SELL', ticker: selectedStock.ticker, qty, price, pl: profitLoss });
+
+                const plText = profitLoss >= 0 ? `Profit booked: +${formatRp(profitLoss)}` : `Loss booked: ${formatRp(profitLoss)}`;
+                showToast(`SELL CONFIRMED<br><span class="text-sm font-normal">${qty} shares of ${selectedStock.ticker} sold.<br><strong>${plText}</strong></span>`, profitLoss >= 0);
+            }
+            saveData(); updateTradeUI();
+        }
+
+        function showToast(htmlMsg, isSuccess) {
+            const toast = document.getElementById('tradeReceiptToast');
+            toast.style.backgroundColor = isSuccess ? '#10b981' : '#ef4444';
+            toast.innerHTML = `<h4 class="font-black text-lg mb-1">${htmlMsg}</h4>`;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+
+        // --- PORTFOLIO & MODAL UI ---
+        function updatePortfolioUI() {
+            document.getElementById('quick-cash').textContent = formatRp(userCash);
+            let holdingsValue = 0; let investedValue = 0; let holdingsHtml = '';
+
+            for (let ticker in userPortfolio) {
+                const qty = userPortfolio[ticker];
+                const stockInfo = allStocks.find(s => s.ticker === ticker);
+                if (stockInfo) {
+                    const avgCost = getAvgCost(ticker);
+                    holdingsValue += (qty * stockInfo.currentPrice);
+                    investedValue += (qty * avgCost);
+                    const pl = (qty * stockInfo.currentPrice) - (qty * avgCost);
+
+                    holdingsHtml += `
+                        <div class="flex justify-between items-center py-3 border-b border-gray-100">
+                            <div><span class="font-black text-gray-800">${ticker}</span><br><span class="text-xs font-bold text-gray-400">Qty: ${qty} | Avg: ${formatRp(avgCost)}</span></div>
+                            <div class="text-right"><span class="font-black text-gray-900">${formatRp(qty * stockInfo.currentPrice)}</span><br><span class="text-xs ${getPnlClass(pl)} font-black px-1.5 py-0.5 rounded bg-gray-50">${pl > 0 ? '▲' : '▼'} ${formatRp(Math.abs(pl))}</span></div>
+                        </div>`;
+                }
+            }
+
+            const netPl = holdingsValue - investedValue;
+            document.getElementById('quick-holdings').textContent = formatRp(holdingsValue);
+            document.getElementById('quick-pl').textContent = `${formatRp(netPl)} (${investedValue ? ((netPl / investedValue) * 100).toFixed(2) : 0}%)`;
+            document.getElementById('quick-pl').className = "font-black " + getPnlClass(netPl);
+
+            // Modal Header updates
+            document.getElementById('modal-cash').textContent = formatRp(userCash);
+            document.getElementById('modal-holdings').textContent = formatRp(holdingsValue);
+            document.getElementById('modal-netpl').textContent = formatRp(netPl);
+            document.getElementById('modal-netpl').className = "font-black " + getPnlClass(netPl);
+
+            document.getElementById('portfolio-holdings').innerHTML = holdingsHtml || "<p class='text-gray-400 font-bold p-4 text-center'>No active holdings.</p>";
+
+            // Transaction History
+            document.getElementById('transaction-history').innerHTML = transactionLog.slice().reverse().map(t => {
+                let plHtml = '';
+                if (t.type === 'SELL' && t.pl !== undefined) {
+                    const plColor = t.pl >= 0 ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50';
+                    const plWord = t.pl >= 0 ? 'Profit' : 'Loss';
+                    plHtml = `<span class="${plColor} px-2 py-1 rounded font-black mt-1 inline-block">${plWord}: ${formatRp(Math.abs(t.pl))}</span>`;
+                }
+                return `
+                <div class="flex justify-between items-start py-3 border-b border-gray-200 last:border-0">
+                    <div>
+                        <span class="font-black ${t.type === 'BUY' ? 'text-green-600' : 'text-red-600'}">${t.type}</span> 
+                        <span class="font-bold text-gray-800">${t.qty} ${t.ticker}</span> 
+                        <span class="text-gray-500 font-medium">@ ${formatRp(t.price)}</span>
+                        <br>${plHtml}
+                    </div>
+                    <span class="text-gray-400 font-bold">${dayjs(t.date).format('DD MMM HH:mm')}</span>
+                </div>`;
+            }).join('') || "<p class='text-gray-400 font-bold p-4 text-center'>No transactions yet.</p>";
+        }
+
+        function openPortfolioModal() { updatePortfolioUI(); document.getElementById('portfolioModal').classList.remove('hidden'); }
+        function closePortfolioModal() { document.getElementById('portfolioModal').classList.add('hidden'); }
+
+        function handleDeposit() {
+            const amt = parseFloat(prompt("Enter amount to deposit (e.g., 50000):"));
+            if (amt && amt > 0) { userCash += amt; saveData(); showToast(`Funds Added!<br><span class="text-sm">${formatRp(amt)} successfully credited to account.</span>`, true); }
+        }
+        function handleReset() {
+            if (confirm("DANGER: Are you sure you want to reset everything back to ₹1,00,000? All holdings and history will be lost.")) {
+                userCash = 100000; userPortfolio = {}; transactionLog = []; saveData();
+                closePortfolioModal(); showToast("Account Reset Successfully.", true);
+            }
+        }
+    </script>
+</body>
+
+</html>

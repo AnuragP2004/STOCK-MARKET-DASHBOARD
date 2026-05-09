@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zanzee Electrical Services - Your Trusted Home Experts</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --secondary-color: #f8f9fa;
+            --accent-color: #ff9900;
+            --text-color: #333;
+            --white: #ffffff;
+            --black: #111;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            color: var(--text-color);
+            line-height: 1.6;
+            background-color: var(--white);
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: var(--black);
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: auto;
+            padding: 70px 0;
+        }
+
+        .btn {
+            display: inline-block;
+            background: var(--accent-color);
+            color: var(--white);
+            padding: 16px 32px;
+            border-radius: 6px;
+            font-size: 1.15rem;
+            font-weight: 600;
+            transition: background 0.3s, transform 0.2s;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:hover {
+            background: #e68a00;
+            transform: translateY(-2px);
+        }
+
+        /* --- HERO SECTION WITH YOUR CUSTOM IMAGE --- */
+        .hero {
+            /* Yahan 'hero-bg.jpg' aapki downloaded image ka naam hai */
+            background: linear-gradient(rgba(0, 86, 179, 0.8), rgba(0, 86, 179, 0.8)), url('C:\Users\anura\Downloads') center/cover;
+            height: 90vh;
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: var(--white);
+        }
+
+        .hero h1 {
+            color: var(--white);
+            font-size: 3.8rem;
+            margin-bottom: 25px;
+            line-height: 1.2;
+            letter-spacing: -1px;
+        }
+
+        .hero p {
+            font-size: 1.6rem;
+            margin-bottom: 35px;
+            font-weight: 300;
+            opacity: 0.9;
+        }
+
+        /* --- ABOUT SECTION --- */
+        .about {
+            background: var(--secondary-color);
+            text-align: center;
+        }
+
+        .about p {
+            max-width: 850px;
+            margin: 0 auto 35px auto;
+            font-size: 1.15rem;
+            color: #555;
+        }
+
+        .about-features {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .about-feature {
+            background: var(--white);
+            padding: 22px 32px;
+            border-radius: 8px;
+            box-shadow: 0 5px 8px rgba(0, 0, 0, 0.06);
+            font-weight: 600;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* --- SERVICES SECTION --- */
+        .services {
+            text-align: center;
+        }
+
+        .services h2 {
+            font-size: 2.6rem;
+            margin-bottom: 45px;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+            gap: 30px;
+        }
+
+        .service-card {
+            background: var(--secondary-color);
+            padding: 35px;
+            border-radius: 10px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            text-align: center;
+            border: 1px solid #eee;
+        }
+
+        .service-card:hover {
+            transform: translateY(-7px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+            border-color: #ddd;
+        }
+
+        .service-card i {
+            font-size: 2.8rem;
+            color: var(--primary-color);
+            margin-bottom: 18px;
+        }
+
+        .service-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 12px;
+        }
+
+        /* --- WHY CHOOSE US SECTION --- */
+        .why-choose-us {
+            background: var(--primary-color);
+            color: var(--white);
+            text-align: center;
+        }
+
+        .why-choose-us h2 {
+            color: var(--white);
+            font-size: 2.6rem;
+            margin-bottom: 45px;
+        }
+
+        .benefits {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            list-style: none;
+        }
+
+        .benefits li {
+            font-size: 1.25rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 16px 26px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .benefits li i {
+            color: var(--accent-color);
+        }
+
+        /* --- TESTIMONIALS SECTION --- */
+        .testimonials {
+            background: var(--secondary-color);
+            text-align: center;
+        }
+
+        .testimonials h2 {
+            font-size: 2.6rem;
+            margin-bottom: 45px;
+        }
+
+        .reviews-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+            gap: 30px;
+        }
+
+        .review-card {
+            background: var(--white);
+            padding: 35px;
+            border-radius: 8px;
+            box-shadow: 0 5px 8px rgba(0, 0, 0, 0.05);
+            text-align: left;
+        }
+
+        .stars {
+            color: #FFD700;
+            margin-bottom: 18px;
+        }
+
+        .review-text {
+            font-style: italic;
+            margin-bottom: 25px;
+            color: #555;
+            font-size: 1.05rem;
+        }
+
+        .reviewer-info {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .reviewer-name {
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        /* --- CONTACT SECTION --- */
+        .contact {
+            text-align: center;
+        }
+
+        .contact h2 {
+            font-size: 2.6rem;
+            margin-bottom: 45px;
+        }
+
+        .contact-info {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            flex-wrap: wrap;
+        }
+
+        .contact-item {
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .contact-item i {
+            color: var(--primary-color);
+            font-size: 1.6rem;
+        }
+
+        /* --- FOOTER --- */
+        footer {
+            background: #1a1a1a;
+            color: #ccc;
+            padding: 70px 0 25px 0;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 40px;
+            width: 90%;
+            max-width: 1200px;
+            margin: auto;
+            margin-bottom: 40px;
+        }
+
+        .footer-col h3 {
+            color: var(--white);
+            margin-bottom: 22px;
+            font-size: 1.3rem;
+        }
+
+        .footer-col p {
+            font-size: 1rem;
+            color: #aaa;
+        }
+
+        .footer-col ul {
+            list-style: none;
+        }
+
+        .footer-col ul li {
+            margin-bottom: 12px;
+        }
+
+        .footer-col ul li a:hover {
+            color: var(--accent-color);
+        }
+
+        .social-icons {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .social-icons a {
+            background: rgba(255, 255, 255, 0.1);
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.3s;
+        }
+
+        .social-icons a:hover {
+            background: var(--accent-color);
+            color: var(--white);
+        }
+
+        .footer-bottom {
+            text-align: center;
+            border-top: 1px solid #333;
+            padding-top: 25px;
+            font-size: 0.95rem;
+        }
+
+        /* --- RESPONSIVE IMPROVEMENTS --- */
+        @media (max-width: 992px) {
+            .hero h1 {
+                font-size: 3rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 45px 0;
+            }
+
+            .hero {
+                height: 80vh;
+            }
+
+            .hero h1 {
+                font-size: 2.4rem;
+            }
+
+            .hero p {
+                font-size: 1.3rem;
+            }
+
+            .services h2,
+            .why-choose-us h2,
+            .testimonials h2,
+            .contact h2 {
+                font-size: 2.1rem;
+            }
+
+            .about-features,
+            .benefits,
+            .contact-info {
+                gap: 20px;
+            }
+
+            .contact-info {
+                flex-direction: column;
+                gap: 18px;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <section class="hero">
+        <div class="container">
+            <h1>Reliable Electrical & Home Appliance Repair Services</h1>
+            <p>Fast • Affordable • Certified Experts</p>
+            <a href="#contact" class="btn">Book Service</a>
+        </div>
+    </section>
+
+    <section class="about" id="about">
+        <div class="container">
+            <h2>About Zanzee Electrical Services</h2>
+            <p>Zanzee is a trusted home-service company providing a complete range of electrical repair, installation,
+                and maintenance services. Our certified technicians treat your home with respect, ensuring your
+                electrical and appliance needs are handled safely, efficiently, and to the highest standards.</p>
+
+            <div class="about-features">
+                <div class="about-feature"><i class="fa-solid fa-award"></i> Years of Experience</div>
+                <div class="about-feature"><i class="fa-solid fa-clock"></i> 24/7 Support</div>
+                <div class="about-feature"><i class="fa-solid fa-user-shield"></i> Trusted Technicians</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="services" id="services">
+        <div class="container">
+            <h2>Our Services</h2>
+            <div class="services-grid">
+                <div class="service-card">
+                    <i class="fa-solid fa-house-chimney-crack"></i>
+                    <h3>Home Wiring & Rewiring</h3>
+                    <p>Complete structural wiring and safe replacements for your home.</p>
+                </div>
+                <div class="service-card">
+                    <i class="fa-solid fa-plug"></i>
+                    <h3>Switchboard Repair & Installation</h3>
+                    <p>Modern upgrades, repairs, and fault-finding for switchboards.</p>
+                </div>
+                <div class="service-card">
+                    <i class="fa-solid fa-lightbulb"></i>
+                    <h3>Fan, Light, Inverter & MCB Repair</h3>
+                    <p>Quick fixes and installations for everyday household electricals.</p>
+                </div>
+                <div class="service-card">
+                    <i class="fa-solid fa-snowflake"></i>
+                    <h3>Fridge (Refrigerator) Repair</h3>
+                    <p>Cooling issues, compressor fixes, and refrigerator maintenance.</p>
+                </div>
+                <div class="service-card">
+                    <i class="fa-solid fa-shirt"></i>
+                    <h3>Washing Machine Repair</h3>
+                    <p>Drum, motor, and drainage troubleshooting for all brands.</p>
+                </div>
+                <div class="service-card">
+                    <i class="fa-solid fa-wind"></i>
+                    <h3>AC Repair & Servicing</h3>
+                    <p>Routine maintenance, gas charging, and fast AC repairs.</p>
+                </div>
+                <div class="service-card">
+                    <i class="fa-solid fa-hot-tub-person"></i>
+                    <h3>Geyser Repair</h3>
+                    <p>Heating element replacement and reliable thermostat fixes.</p>
+                </div>
+                <div class="service-card">
+                    <i class="fa-solid fa-fire-burner"></i>
+                    <h3>Microwave & Oven Repair</h3>
+                    <p>Magnetron replacement, control board fixes, and heating repairs.</p>
+                </div>
+                <div class="service-card">
+                    <i class="fa-solid fa-toolbox"></i>
+                    <h3>All Electrical Appliances Repair</h3>
+                    <p>Comprehensive diagnostics and maintenance for any electrical appliance.</p>
+                </div>
+                <div class="service-card">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <h3>Emergency Electrician Support</h3>
+                    <p>Rapid response electricians for power failures and hazards.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="why-choose-us">
+        <div class="container">
+            <h2>Why Choose Us</h2>
+            <ul class="benefits">
+                <li><i class="fa-solid fa-circle-check"></i> Fast Delivery</li>
+                <li><i class="fa-solid fa-circle-check"></i> Genuine Parts</li>
+                <li><i class="fa-solid fa-circle-check"></i> Same-Day Repair</li>
+                <li><i class="fa-solid fa-circle-check"></i> 100% Satisfaction</li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="testimonials">
+        <div class="container">
+            <h2>What Our Customers Say</h2>
+            <div class="reviews-grid">
+                <div class="review-card">
+                    <div class="stars">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                            class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                            class="fa-solid fa-star"></i>
+                    </div>
+                    <p class="review-text">"My AC broke down in the middle of summer, and Zanzee sent a technician
+                        within two hours. Fast, polite, and very reasonably priced!"</p>
+                    <div class="reviewer-info">
+                        <p class="reviewer-name">— Rohan M.</p>
+                    </div>
+                </div>
+                <div class="review-card">
+                    <div class="stars">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                            class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                            class="fa-solid fa-star"></i>
+                    </div>
+                    <p class="review-text">"I had a complex rewiring job in my older home. The Zanzee team explained
+                        everything clearly and finished the job safely. Highly recommended."</p>
+                    <div class="reviewer-info">
+                        <p class="reviewer-name">— Priya S.</p>
+                    </div>
+                </div>
+                <div class="review-card">
+                    <div class="stars">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                            class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                            class="fa-solid fa-star-half-stroke"></i>
+                    </div>
+                    <p class="review-text">"Great service for my washing machine. The technician was transparent about
+                        the cost of the genuine parts needed. It’s working like new again."</p>
+                    <div class="reviewer-info">
+                        <p class="reviewer-name">— Vikram T.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="contact" id="contact">
+        <div class="container">
+            <h2>Contact Zanzee Electrical Services</h2>
+            <div class="contact-info">
+                <div class="contact-item">
+                    <i class="fa-solid fa-phone"></i>
+                    <span>
+                        <p>THIS COMPANY MADE FOR MY EX B/C SHE REJECT ME </p>
+                    </span>
+                    <span><strong>Phone:</strong> +91 XXXXX XXXXX</span>
+                </div>
+                <div class="contact-item">
+                    <i class="fa-brands fa-whatsapp"></i>
+                    <span><strong>WhatsApp:</strong> +91 7851037445</span>
+                </div>
+                <div class="contact-item">
+                    <i class="fa-solid fa-envelope"></i>
+                    <span><strong>Email:</strong> sagrika@akmgmail.com</span>
+                </div>
+                <div class="contact-item">
+                    <i class="fa-solid fa-clock"></i>
+                    <span><strong>Hours:</strong> Mon-Sun 8 AM - 9 PM <br> (24/7 Emergency Support)</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-col">
+                <h3>Zanzee Electrical Services</h3>
+                <p>Trusted home-service experts providing fast, reliable, and certified electrical & appliance
+                    solutions.</p>
+            </div>
+            <div class="footer-col">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="#">Home</a></li>
+                    <li><a href="#about">About Us</a></li>
+                    <li><a href="#services">Services</a></li>
+                    <li><a href="#contact">Contact & Booking</a></li>
+                    <li><a href="#">Privacy Policy</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h3>Our Services</h3>
+                <ul>
+                    <li><a href="#services">Electrical Repairs</a></li>
+                    <li><a href="#services">Appliance Repair</a></li>
+                    <li><a href="#services">AC Servicing</a></li>
+                    <li><a href="#services">Emergency Support</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h3>Connect With Us</h3>
+                <div class="social-icons">
+                    <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
+                    <a href="#"><i class="fa-brands fa-instagram"></i></a>
+                    <a href="#"><i class="fa-brands fa-twitter"></i></a>
+                    <a href="#"><i class="fa-brands fa-linkedin-in"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Zanzee Electrical Services. All rights reserved.</p>
+        </div>
+    </footer>
+
+</body>
+
+</html>

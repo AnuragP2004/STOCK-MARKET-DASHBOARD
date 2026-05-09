@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Stock Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .stock-card {
+            background-color: #ffffff;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .container-fluid {
+            width: 95%;
+            margin: auto;
+        }
+
+        .stock-item {
+            cursor: pointer;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            transition-property: background-color, transform;
+            transition-duration: 200ms;
+            transition-timing-function: ease-in-out;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stock-item:hover {
+            background-color: #f3f4f6;
+        }
+
+        .stock-item.selected {
+            background-color: #e0f2fe;
+        }
+
+        .favorite-btn {
+            cursor: pointer;
+            font-size: 1.25rem;
+            padding: 0 0.5rem;
+            color: #ccc;
+            transition: color 0.2s;
+        }
+
+        .favorite-btn.is-favorite {
+            color: #f59e0b;
+        }
+
+        #loadingSpinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+            background-color: #f9fafb;
+            border-radius: 8px;
+        }
+
+        .portfolio-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .transaction-item {
+            padding: 0.5rem 0;
+            border-bottom: 1px dashed #e5e7eb;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            width: 90%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            position: relative;
+        }
+
+        /* Styles for Toast/Receipt */
+        #tradeReceiptToast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            background-color: #10b981;
+            color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.5s, transform 0.5s;
+            transform: translateY(20px);
+        }
+
+        #tradeReceiptToast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Styles for Volume Bar */
+        .volume-bar-label {
+            width: 50%;
+            text-align: center;
+        }
+
+        /* Fake Graph Styles */
+        .fake-graph-container {
+            width: 100%;
+            height: 250px;
+            background: #fff;
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .fake-graph-line {
+            height: 100%;
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .graph-dot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        /* Index Item Style */
+        .index-item {
+            display: flex;
+            flex-direction: column;
+            padding: 0.5rem 0;
+        }
+
+        .index-main-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.125rem;
+            font-weight: 700;
+        }
+
+        .index-sub-line {
+            display: flex;
+            justify-content: flex-end;
+            font-size: 0.875rem;
+            margin-top: 0.1rem;
+        }
+
+        .indicator-pill {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 p-4">
+
+    <div class="container-fluid max-w-7xl mx-auto p-4 md:p-8">
+
+        <section id="welcomeView" class="view min-h-[80vh] flex flex-col justify-center items-center text-center">
+            <h1 class="text-6xl font-extrabold text-gray-900 mb-4">
+                Welcome to the Stock Market Simulator 🚀
+            </h1>
+            <p class="text-xl text-gray-600 mb-8">
+                Start your trading journey with virtual cash!
+            </p>
+            <button id="startDashboardBtn"
+                class="px-8 py-4 bg-green-600 text-white text-xl font-bold rounded-lg shadow-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-500 transition duration-150">
+                Fetch Stocks & Start Dashboard
+            </button>
+        </section>
+
+        <section id="dashboardView" class="view hidden">
+            <header class="text-center mb-8">
+                <h1 class="text-4xl md:text-5xl font-bold text-gray-800 tracking-tight mb-2">
+                    Advanced Indian Stock Dashboard
+                </h1>
+                <div class="flex flex-col sm:flex-row justify-center items-center gap-4 text-lg text-gray-600">
+                    <p>Real-time Analysis and Portfolio Tracking Tool.</p>
+                    <div class="flex gap-4">
+                        <button id="viewFavoritesBtn"
+                            class="px-4 py-2 bg-yellow-600 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-opacity-50 text-base">
+                            ⭐ View Favorites
+                        </button>
+                        <button id="openPortfolioBtn"
+                            class="px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 text-base">
+                            View My Portfolio 📈
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="mb-8 p-6 stock-card">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div class="w-full md:w-3/4">
+                        <label for="tickerInput" class="block text-sm font-medium text-gray-700 mb-1">Filter
+                            Stocks</label>
+                        <input type="text" id="tickerInput"
+                            class="flex-1 block w-full rounded-md border-gray-300 px-4 py-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            placeholder="e.g. TCS or Reliance">
+                    </div>
+                    <div class="w-full md:w-1/4 mt-4 md:mt-0">
+                        <button id="fetchDataBtn"
+                            class="button w-full px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
+                            Fetch Top 500 Stocks
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <main class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+
+                <div class="lg:col-span-1 flex flex-col gap-8">
+
+                    <div class="p-6 stock-card border-l-4 border-yellow-500">
+                        <h2 class="text-xl font-semibold text-gray-700 mb-3">Market Index Snapshot</h2>
+                        <div id="index-snapshot" class="space-y-3">
+                            <div class="index-item border-b pb-2">
+                                <div class="index-main-line">
+                                    <span class="font-semibold">NIFTY 50</span>
+                                    <span class="text-gray-800" id="nifty-value">--</span>
+                                </div>
+                                <div class="index-sub-line">
+                                    <span class="text-gray-600" id="nifty-change">--</span>
+                                </div>
+                            </div>
+                            <div class="index-item border-b pb-2">
+                                <div class="index-main-line">
+                                    <span class="font-semibold">SENSEX</span>
+                                    <span class="text-gray-800" id="sensex-value">--</span>
+                                </div>
+                                <div class="index-sub-line">
+                                    <span class="text-gray-600" id="sensex-change">--</span>
+                                </div>
+                            </div>
+                            <div class="index-item">
+                                <div class="index-main-line">
+                                    <span class="font-semibold">BANK NIFTY</span>
+                                    <span class="text-gray-800" id="banknifty-value">--</span>
+                                </div>
+                                <div class="index-sub-line">
+                                    <span class="text-gray-600" id="banknifty-change">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6 stock-card border-l-4 border-indigo-500">
+                        <h2 class="text-xl font-semibold text-gray-700 mb-3">My Account Summary</h2>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-500">Cash Balance</span>
+                                <span id="quick-cash-balance" class="font-bold text-indigo-700">₹100,000.00</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-500">Holdings Value</span>
+                                <span id="quick-holdings-value" class="font-bold text-gray-800">₹0.00</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm border-t pt-2">
+                                <span class="text-gray-500 font-medium">Day's P&L</span>
+                                <span id="quick-day-pl" class="font-bold text-gray-600">₹0.00 (0.00%)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6 stock-card">
+                        <h2 class="text-xl font-semibold text-gray-700 mb-3">Top Gainers & Losers</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="text-md font-bold text-green-600 mb-1">Gainers</h4>
+                                <div id="topGainersList" class="space-y-1">
+                                    <p class="text-xs text-gray-500">Loading...</p>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="text-md font-bold text-red-600 mb-1">Losers</h4>
+                                <div id="topLosersList" class="space-y-1">
+                                    <p class="text-xs text-gray-500">Loading...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-6 stock-card flex flex-col">
+                        <h2 class="text-2xl font-semibold text-gray-700 mb-4">Stock List</h2>
+                        <div id="stockListContainer" class="flex-grow overflow-y-auto max-h-[50vh] space-y-2 pr-2">
+                            <p class="text-center text-gray-500 mt-10">
+                                Click 'Fetch Top 500 Stocks' to load data.
+                            </p>
+                        </div>
+                        <div id="loadingSpinner" class="hidden mx-auto mt-8"></div>
+                    </div>
+                </div>
+
+
+                <div id="detailView" class="lg:col-span-3 p-6 stock-card">
+
+                    <div id="defaultDetailMessage" class="text-center p-20 text-gray-500">
+                        <p class="text-2xl font-medium">Please select a stock from the list to view its analysis.</p>
+                        <p class="text-lg mt-2">Historical and technical analysis will be displayed here.</p>
+                    </div>
+
+                    <div id="stockContent" class="hidden">
+
+                        <div class="mb-6 border-b pb-4">
+                            <h2 class="text-3xl font-bold text-gray-700 mb-1" id="stockNameHeader"></h2>
+                            <p class="text-gray-500 text-lg mb-4" id="tickerHeader"></p>
+
+                            <div class="mb-6">
+                                <p class="text-4xl font-extrabold">₹<span id="currentPrice"
+                                        class="font-medium">N/A</span></p>
+                                <p class="text-xl font-medium">Change: <span id="priceChange"
+                                        class="font-medium text-gray-600">N/A</span></p>
+                            </div>
+
+                            <div class="w-full mt-4">
+                                <div class="flex justify-between text-xs text-gray-500 mb-1">
+                                    <span id="low52WeekDisplay">Low: ₹N/A</span>
+                                    <span id="high52WeekDisplay">High: ₹N/A</span>
+                                </div>
+                                <div class="relative h-2 bg-red-200 rounded-full">
+                                    <div id="pricePosition" class="absolute h-2 rounded-full bg-green-500"
+                                        style="width: 50%;"></div>
+                                    <div id="currentPriceDot"
+                                        class="absolute w-3 h-3 bg-indigo-600 rounded-full top-[-2.5px] -ml-1.5"
+                                        style="left: 50%;"></div>
+                                </div>
+                                <div class="text-xs text-center text-indigo-600 font-semibold mt-2">
+                                    Current Price Position
+                                </div>
+                            </div>
+
+                            <div id="stock-info"
+                                class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-gray-600 text-sm border-t pt-4 mt-6">
+                                <p><strong>Market Cap:</strong> <span id="marketCap" class="font-medium">N/A</span></p>
+                                <p><strong>Volume:</strong> <span id="volume" class="font-medium">N/A</span></p>
+                                <p><strong>P/E Ratio:</strong> <span id="peRatio" class="font-medium">N/A</span></p>
+                                <p><strong>EPS (TTM):</strong> <span id="eps" class="font-medium">N/A</span></p>
+                                <p><strong>Dividend Yield:</strong> <span id="dividendYield"
+                                        class="font-medium">N/A</span></p>
+                                <p><strong>Beta:</strong> <span id="beta" class="font-medium">N/A</span></p>
+                            </div>
+                        </div>
+
+                        <div id="trading-panel" class="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                            <h3 class="text-xl font-bold text-gray-700 mb-3">Trade <span id="trade-ticker"
+                                    class="text-indigo-600"></span></h3>
+                            <p class="text-base text-gray-600 mb-3">Your Shares: <span id="user-shares"
+                                    class="font-semibold">0</span> | **Avg. Cost:** <span id="average-cost"
+                                    class="font-semibold text-gray-800">₹N/A</span></p>
+
+                            <div class="flex gap-3 items-end mb-3">
+                                <div class="flex-1">
+                                    <label for="trade-quantity"
+                                        class="block text-xs font-medium text-gray-500">Quantity</label>
+                                    <input type="number" id="trade-quantity" placeholder="Quantity" min="1" value="1"
+                                        class="w-full rounded-md border-gray-300 px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <button id="buy-btn"
+                                    class="px-4 py-2 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600">BUY</button>
+                                <button id="sell-btn"
+                                    class="px-4 py-2 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600">SELL</button>
+                            </div>
+                            <p id="trade-message" class="mt-2 text-sm font-medium"></p>
+                        </div>
+
+                        <div class="relative mb-6">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-2">Historical Performance (Mock)</h3>
+                            <div id="fakeGraphContainer" class="fake-graph-container">
+                            </div>
+                        </div>
+
+                        <div class="relative mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-3">Technical Snapshot (Trend)</h3>
+                            <div class="grid grid-cols-3 gap-4 text-sm font-medium">
+                                <div class="flex flex-col items-center p-2 rounded-lg bg-white shadow-sm">
+                                    <span class="text-gray-500 text-xs mb-1">RSI (14)</span>
+                                    <span id="indicator-rsi" class="indicator-pill bg-gray-200 text-gray-800">N/A</span>
+                                </div>
+                                <div class="flex flex-col items-center p-2 rounded-lg bg-white shadow-sm">
+                                    <span class="text-gray-500 text-xs mb-1">MACD Signal</span>
+                                    <span id="indicator-macd"
+                                        class="indicator-pill bg-gray-200 text-gray-800">N/A</span>
+                                </div>
+                                <div class="flex flex-col items-center p-2 rounded-lg bg-white shadow-sm">
+                                    <span class="text-gray-500 text-xs mb-1">Volatility (ATR)</span>
+                                    <span id="indicator-atr" class="indicator-pill bg-gray-200 text-gray-800">N/A</span>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="mb-6">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-2">Market Activity (Volume)</h3>
+                            <div class="bg-gray-100 p-4 rounded-lg">
+                                <p class="text-sm text-gray-700 mb-2">Buy vs. Sell Volume (24h Mock)</p>
+                                <div id="volumeBar"
+                                    class="relative flex w-full h-8 rounded-lg overflow-hidden border border-gray-300">
+                                </div>
+                                <div class="flex justify-between text-xs font-medium text-gray-600 mt-1">
+                                    <span id="buyVolumeLabel" class="text-green-600">Buy: N/A</span>
+                                    <span id="sellVolumeLabel" class="text-red-600">Sell: N/A</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-700 mb-2">Technical Analysis (Analysis)</h3>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <p id="analysisText" class="text-gray-600">
+                                    Detailed technical analysis will appear here.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </section>
+
+    </div>
+
+    <div id="tradeReceiptToast" role="alert"></div>
+
+    <div id="portfolioModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6 border-b pb-3">
+                <h2 class="text-3xl font-bold text-gray-800">My Profile & Portfolio</h2>
+                <button id="closePortfolioBtn"
+                    class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+            </div>
+
+            <div class="mb-6 p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg">
+                <p class="text-lg text-gray-600">Current Cash Balance</p>
+                <p class="text-3xl font-extrabold text-indigo-700">₹<span id="user-cash-summary">100000.00</span></p>
+            </div>
+
+            <div class="mb-6 p-4 bg-gray-100 rounded-lg">
+                <h3 class="text-xl font-bold text-gray-700 mb-2">Total Portfolio Summary</h3>
+                <p class="text-base text-gray-600">Current Value: ₹<span id="total-holdings-value"
+                        class="font-semibold">0.00</span></p>
+                <p class="text-base">Net P&L: <span id="net-pl" class="font-bold text-red-500">N/A</span></p>
+            </div>
+
+            <h3 class="text-xl font-semibold text-gray-700 mb-3">Stock Holdings (Shares Held)</h3>
+            <div id="portfolio-holdings" class="space-y-1 text-sm text-gray-600 max-h-60 overflow-y-auto">
+                <p class="text-center text-gray-400 mt-4">No stocks held yet. Buy a stock to see it here.</p>
+            </div>
+
+            <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3 border-t pt-3">Transaction History</h3>
+            <div id="transaction-history"
+                class="space-y-1 text-sm text-gray-600 max-h-40 overflow-y-auto bg-gray-50 p-3 rounded">
+                <p class="text-center text-gray-400">No transactions recorded.</p>
+            </div>
+
+            <hr class="my-6">
+
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="w-full sm:w-1/2">
+                    <p class="text-lg font-medium text-gray-700 mb-2">Need more capital?</p>
+                    <button id="deposit-btn-summary"
+                        class="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 text-base">
+                        Deposit Custom Amount
+                    </button>
+                </div>
+                <div class="w-full sm:w-1/2">
+                    <p class="text-lg font-medium text-gray-700 mb-2">Start Fresh?</p>
+                    <button id="reset-data-btn"
+                        class="w-full px-6 py-3 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 text-base">
+                        Reset All Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.10.7/dayjs.min.js"></script>
+
+    <script>
+        const TOTAL_STOCKS = 500;
+        const LIVE_UPDATE_INTERVAL = 5000;
+
+        const formatRupee = (num) => {
+            if (typeof num !== 'number') num = parseFloat(num);
+            if (isNaN(num)) return 'N/A';
+            return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        };
+
+        const generateMockHistoricalData = (days, startPrice) => {
+            const data = [];
+            let lastPrice = startPrice;
+            const endDate = dayjs();
+
+            for (let i = days - 1; i >= 0; i--) {
+                const date = endDate.subtract(i, 'day').format('YYYY-MM-DD');
+                const change = (Math.random() - 0.5) * (lastPrice * 0.02);
+                lastPrice = Math.max(1, lastPrice + change);
+                data.push({
+                    x: date,
+                    y: parseFloat(lastPrice.toFixed(2))
+                });
+            }
+            return data;
+        };
+
+        const getTicker = (company) => {
+            let ticker = company.split(' ').map(word => word[0]).join('').toUpperCase().substring(0, 5).replace(/[^A-Z]/g, '');
+
+            if (company.includes("ICICI Bank")) return 'ICICIB';
+            else if (company.includes("IndusInd Bank")) return 'IB';
+            else if (company.includes("Asian Paints")) ticker = 'ASPN';
+            else if (company.includes("Adani Ports")) return 'ADPORTS';
+            else if (company.includes("Adani Enterprises")) return 'ADENTER';
+            else if (company.includes("Adani Power")) return 'ADPOWER';
+            else if (company.includes("Apollo Hospitals")) return 'APLHOS';
+            else if (company.includes("Bajaj Finance")) return 'BAJFIN';
+            else if (company.includes("Tata Consultancy Services")) return 'TCS';
+            else if (company.includes("HDFC Bank")) return 'HDFCB';
+            else if (company.includes("Reliance Industries")) return 'RI';
+            else if (company.includes("Titan Company")) return 'TITAN';
+            else if (company.includes("Maruti Suzuki India")) return 'MARUTI';
+            else if (company.includes("Avenue Supermarts")) return 'DMART';
+            else if (company.includes("Hindustan Unilever")) return 'HUL';
+
+            else if (ticker.length === 0) ticker = company.substring(0, 3).toUpperCase();
+
+            return ticker;
+        };
+
+        const indexBaseValues = {
+            NIFTY: 25000.00,
+            SENSEX: 83000.00,
+            BANKNIFTY: 56000.00
+        };
+
+        const generateMockIndexData = (base) => {
+            const change = (Math.random() - 0.5) * (base * 0.005);
+            const newPrice = base + change;
+            const changePercent = (change / base) * 100;
+            return {
+                value: parseFloat(newPrice.toFixed(2)),
+                change: parseFloat(change.toFixed(2)),
+                changePercent: parseFloat(changePercent.toFixed(2)),
+                base: base
+            };
+        };
+
+        let marketIndices = {
+            NIFTY: generateMockIndexData(indexBaseValues.NIFTY),
+            SENSEX: generateMockIndexData(indexBaseValues.SENSEX),
+            BANKNIFTY: generateMockIndexData(indexBaseValues.BANKNIFTY)
+        };
+
+        const getAdjustedInitialPrice = (company) => {
+            let basePrice = 0;
+
+            if (company.includes("Reliance Industries")) basePrice = 3850 + Math.random() * 400;
+            else if (company.includes("Tata Consultancy Services")) basePrice = 5500 + Math.random() * 300;
+            else if (company.includes("HDFC Bank")) basePrice = 1950 + Math.random() * 200;
+            else if (company.includes("ICICI Bank")) basePrice = 1650 + Math.random() * 150;
+            else if (company.includes("Hindustan Unilever")) basePrice = 2800 + Math.random() * 200;
+            else if (company.includes("Infosys")) basePrice = 1700 + Math.random() * 100;
+            else if (company.includes("Bajaj Finance")) basePrice = 10500 + Math.random() * 500;
+            else if (company.includes("State Bank of India")) basePrice = 950 + Math.random() * 50;
+            else if (company.includes("Bharti Airtel")) basePrice = 1350 + Math.random() * 100;
+            else if (company.includes("Kotak Mahindra Bank")) basePrice = 2300 + Math.random() * 150;
+            else if (company.includes("Larsen & Toubro")) basePrice = 4200 + Math.random() * 300;
+            else if (company.includes("ITC")) basePrice = 550 + Math.random() * 50;
+            else if (company.includes("Titan Company")) basePrice = 4500 + Math.random() * 300;
+            else if (company.includes("Maruti Suzuki India")) basePrice = 14000 + Math.random() * 500;
+            else if (company.includes("Adani Enterprises")) basePrice = 3500 + Math.random() * 500;
+            else if (company.includes("Apollo Hospitals")) basePrice = 9500 + Math.random() * 500;
+            else if (company.includes("Avenue Supermarts")) basePrice = 5200 + Math.random() * 400;
+            else if (company.includes("Tata Steel")) basePrice = 350 + Math.random() * 50;
+            else basePrice = Math.random() * 4000 + 500;
+
+            return parseFloat(basePrice.toFixed(2));
+        };
+
+
+        const generateMockStockList = (count) => {
+            const stocks = [];
+            const initialCompanies = [
+                "Reliance Industries", "Tata Consultancy Services", "HDFC Bank", "ICICI Bank", "Hindustan Unilever",
+                "Infosys", "Bajaj Finance", "State Bank of India", "Bharti Airtel", "Kotak Mahindra Bank",
+                "Larsen & Toubro", "ITC", "Asian Paints", "HCL Technologies", "Axis Bank",
+                "Maruti Suzuki India", "Sun Pharmaceutical Industries", "Titan Company", "Mahindra & Mahindra",
+                "NTPC", "Nestle India", "Adani Ports", "Power Grid Corporation of India", "Wipro",
+                "UltraTech Cement", "Tata Steel", "Adani Enterprises", "Coal India", "Grasim Industries",
+                "Hindalco Industries", "Bharat Petroleum Corporation", "ONGC", "JSW Steel", "Tata Motors",
+                "Shree Cement", "Eicher Motors", "IndusInd Bank", "Britannia Industries", "Hero MotoCorp",
+                "Apollo Hospitals Enterprise", "Divi's Laboratories", "Bajaj Auto", "Cipla", "Dr. Reddy's Laboratories",
+                "Tech Mahindra", "Tata Consumer Products", "Dabur India", "Pidilite Industries", "Godrej Consumer Products",
+                "Hindustan Aeronautics", "Bharat Electronics", "Oil and Natural Gas Corporation", "Gail India", "Coal India Limited",
+                "Power Finance Corporation", "Rural Electrification Corporation", "REC Ltd", "Adani Power", "Adani Green Energy",
+                "Tata Power Company", "Siemens India", "ABB India", "Thermax Limited", "Voltas Limited",
+                "Havells India", "Crompton Greaves Consumer Electricals", "Blue Star Limited", "Whirlpool of India", "Dixon Technologies",
+                "Persistent Systems", "Mphasis Limited", "Coforge Limited", "L&T Technology Services", "Mindtree Limited",
+                "Oracle Financial Services Software", "TCS e-Serve Limited", "Wipro GE Healthcare", "Tech Mahindra Business Services", "Capgemini Technology Services India",
+                "Jubilant FoodWorks", "Devyani International", "Westlife Development", "Varun Beverages", "Hatsun Agro Product",
+                "Future Retail", "Avenue Supermarts (D-Mart)", "Trent Limited", "Shoppers Stop", "V-Mart Retail",
+                "Aarti Industries", "Deepak Nitrite", "Gujarat Fluorochemicals", "SRF Limited", "Pidilite Industries",
+                "United Breweries", "Radico Khaitan", "United Spirits", "Globus Spirits", "Tilaknagar Industries"
+            ];
+            const sectors = ['Technology', 'Finance', 'Automobile', 'Pharma', 'Energy', 'Telecom', 'Infrastructure', 'Consumer Goods', 'Chemicals', 'Metals'];
+            const sizePrefix = ['Large Cap', 'Mid Cap', 'Small Cap', 'Emerging'];
+            const suffixes = ['Solutions', 'Tech', 'Services', 'Bank', 'Motors', 'Pharma', 'Power', 'Infra', 'Chemicals', 'Corp'];
+
+            for (let i = 0; i < count; i++) {
+                let company;
+
+                if (i < initialCompanies.length) {
+                    company = initialCompanies[i];
+                } else {
+                    const sector = sectors[i % sectors.length];
+                    const prefix = sizePrefix[i % sizePrefix.length];
+                    const suffix = suffixes[i % suffixes.length];
+                    const randomName = ['Global', 'Alpha', 'Dynamic', 'Pioneer', 'Mega', 'Star'][Math.floor(Math.random() * 6)];
+
+                    company = `${prefix} ${randomName} ${sector} ${suffix}`;
+                }
+
+                const ticker = getTicker(company);
+
+                let initialPrice = getAdjustedInitialPrice(company);
+
+                if (!initialCompanies.includes(company) && company.includes('Large Cap')) {
+                    initialPrice = parseFloat((Math.random() * 8000 + 1000).toFixed(2));
+                }
+
+                initialPrice = parseFloat(initialPrice.toFixed(2));
+
+
+                stocks.push({
+                    company,
+                    ticker: ticker.toUpperCase(),
+                    currentPrice: initialPrice,
+                    change: 0.00,
+                    changePercent: 0.00,
+                    historicalData: generateMockHistoricalData(180, initialPrice),
+                    marketCap: (Math.random() * 2000000 + 10000).toFixed(2) + " Cr",
+                    peRatio: (Math.random() * 50 + 10).toFixed(2),
+                    dividendYield: (Math.random() * 5).toFixed(2) + "%",
+                    high52Week: (initialPrice * (1 + Math.random() * 0.2)).toFixed(2),
+                    low52Week: (initialPrice * (1 - Math.random() * 0.2)).toFixed(2),
+                    volume: (Math.floor(Math.random() * 500000) + 100000).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+                    eps: (Math.random() * 50 + 5).toFixed(2),
+                    beta: (Math.random() * 1.5 + 0.5).toFixed(2),
+                    basePrice: initialPrice,
+                    startOfDayPrice: initialPrice
+                });
+            }
+            return stocks;
+        };
+
+        const welcomeView = document.getElementById('welcomeView');
+        const dashboardView = document.getElementById('dashboardView');
+        const startDashboardBtn = document.getElementById('startDashboardBtn');
+
+        const fetchDataBtn = document.getElementById('fetchDataBtn');
+        const tickerInput = document.getElementById('tickerInput');
+        const stockListContainer = document.getElementById('stockListContainer');
+        const stockNameHeaderEl = document.getElementById('stockNameHeader');
+        const tickerHeaderEl = document.getElementById('tickerHeader');
+        const currentPriceEl = document.getElementById('currentPrice');
+        const priceChangeEl = document.getElementById('priceChange');
+        const marketCapEl = document.getElementById('marketCap');
+        const peRatioEl = document.getElementById('peRatio');
+        const dividendYieldEl = document.getElementById('dividendYield');
+        const low52WeekDisplayEl = document.getElementById('low52WeekDisplay');
+        const high52WeekDisplayEl = document.getElementById('high52WeekDisplay');
+        const pricePositionEl = document.getElementById('pricePosition');
+        const currentPriceDotEl = document.getElementById('currentPriceDot');
+
+        const volumeBarEl = document.getElementById('volumeBar');
+        const buyVolumeLabelEl = document.getElementById('buyVolumeLabel');
+        const sellVolumeLabelEl = document.getElementById('sellVolumeLabel');
+
+        const quickCashBalanceEl = document.getElementById('quick-cash-balance');
+        const quickHoldingsValueEl = document.getElementById('quick-holdings-value');
+        const quickDayPLEl = document.getElementById('quick-day-pl');
+        const topGainersList = document.getElementById('topGainersList');
+        const topLosersList = document.getElementById('topLosersList');
+
+        const indicatorRSIEl = document.getElementById('indicator-rsi');
+        const indicatorMACDEl = document.getElementById('indicator-macd');
+        const indicatorATREl = document.getElementById('indicator-atr');
+
+        const fakeGraphContainerEl = document.getElementById('fakeGraphContainer');
+
+        const niftyValueEl = document.getElementById('nifty-value');
+        const niftyChangeEl = document.getElementById('nifty-change');
+        const sensexValueEl = document.getElementById('sensex-value');
+        const sensexChangeEl = document.getElementById('sensex-change');
+        const bankniftyValueEl = document.getElementById('banknifty-value');
+        const bankniftyChangeEl = document.getElementById('banknifty-change');
+
+
+        const analysisTextEl = document.getElementById('analysisText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const volumeEl = document.getElementById('volume');
+        const epsEl = document.getElementById('eps');
+        const betaEl = document.getElementById('beta');
+
+        const defaultDetailMessage = document.getElementById('defaultDetailMessage');
+        const stockContent = document.getElementById('stockContent');
+        const viewFavoritesBtn = document.getElementById('viewFavoritesBtn');
+
+        const tradingPanelEl = document.getElementById('trading-panel');
+        const tradeTickerEl = document.getElementById('trade-ticker');
+        const userSharesEl = document.getElementById('user-shares');
+        const averageCostEl = document.getElementById('average-cost');
+        const tradeQuantityInput = document.getElementById('trade-quantity');
+        const buyBtn = document.getElementById('buy-btn');
+        const sellBtn = document.getElementById('sell-btn');
+        const tradeMessageEl = document.getElementById('trade-message');
+        const tradeReceiptToast = document.getElementById('tradeReceiptToast');
+
+        const portfolioModal = document.getElementById('portfolioModal');
+        const openPortfolioBtn = document.getElementById('openPortfolioBtn');
+        const closePortfolioBtn = document.getElementById('closePortfolioBtn');
+        const userCashSummaryEl = document.getElementById('user-cash-summary');
+        const portfolioHoldingsEl = document.getElementById('portfolio-holdings');
+        const depositBtnSummary = document.getElementById('deposit-btn-summary');
+        const totalHoldingsValueEl = document.getElementById('total-holdings-value');
+        const netPlEl = document.getElementById('net-pl');
+        const transactionHistoryEl = document.getElementById('transaction-history');
+        const resetDataBtn = document.getElementById('reset-data-btn');
+
+
+        let allStocks = [];
+        let userPortfolio = {};
+        let userCash = 100000.00;
+        let selectedStock = null;
+        let priceSimulationInterval = null;
+        let favoriteStocks = [];
+        let transactionLog = [];
+
+        let baseHoldingsValue = 0;
+
+        function switchView(viewName) {
+            const views = {
+                'welcome': welcomeView,
+                'dashboard': dashboardView,
+            };
+            Object.values(views).forEach(view => view.classList.add('hidden'));
+            views[viewName].classList.remove('hidden');
+        }
+
+        function loadFavorites() {
+            favoriteStocks = JSON.parse(localStorage.getItem('favoriteStocks')) || [];
+        }
+
+        function saveFavorites() {
+            localStorage.setItem('favoriteStocks', JSON.stringify(favoriteStocks));
+        }
+
+        function loadTransactions() {
+            transactionLog = JSON.parse(localStorage.getItem('transactionLog')) || [];
+        }
+
+        function saveTransactions() {
+            localStorage.setItem('transactionLog', JSON.stringify(transactionLog));
+        }
+
+        function logTransaction(type, ticker, quantity, price, costBasis, profitLoss = 0) {
+            transactionLog.push({
+                time: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+                type: type,
+                ticker: ticker,
+                quantity: quantity,
+                price: price,
+                costBasis: costBasis,
+                profitLoss: profitLoss
+            });
+            saveTransactions();
+        }
+
+        function toggleFavorite(ticker) {
+            const index = favoriteStocks.indexOf(ticker);
+            if (index > -1) {
+                favoriteStocks.splice(index, 1);
+            } else {
+                favoriteStocks.push(ticker);
+            }
+            saveFavorites();
+            applyFilter();
+        }
+
+        function loadPortfolio() {
+            const portfolio = JSON.parse(localStorage.getItem('stockPortfolio')) || {};
+            userCash = parseFloat(portfolio.cash) >= 100.00 ? parseFloat(portfolio.cash) : 100000.00;
+            userPortfolio = portfolio.shares || {};
+
+            baseHoldingsValue = parseFloat(portfolio.baseHoldingsValue) || 0;
+
+            loadFavorites();
+            loadTransactions();
+        }
+
+        function savePortfolio(currentHoldingsValue) {
+            localStorage.setItem('stockPortfolio', JSON.stringify({
+                shares: userPortfolio,
+                cash: userCash.toFixed(2),
+                baseHoldingsValue: currentHoldingsValue.toFixed(2)
+            }));
+        }
+
+        function getPNLClass(value) {
+            return value > 0 ? 'text-green-500' : (value < 0 ? 'text-red-500' : 'text-gray-600');
+        }
+
+        function getAverageCost(ticker) {
+            const totalBuyCost = transactionLog
+                .filter(tx => tx.ticker === ticker && tx.type === 'BUY')
+                .reduce((sum, tx) => sum + (tx.quantity * tx.price), 0);
+
+            const totalSharesBought = transactionLog
+                .filter(tx => tx.ticker === ticker && tx.type === 'BUY')
+                .reduce((sum, tx) => sum + tx.quantity, 0);
+
+            const totalSharesSold = transactionLog
+                .filter(tx => tx.ticker === ticker && tx.type === 'SELL')
+                .reduce((sum, tx) => sum + tx.quantity, 0);
+
+            const netSharesHeld = totalSharesBought - totalSharesSold;
+
+            return (totalBuyCost > 0 && netSharesHeld > 0) ? (totalBuyCost / totalSharesBought) : 0;
+        }
+
+        function calculateAndRenderQuickSummary() {
+            let totalCurrentValue = 0;
+
+            Object.keys(userPortfolio).forEach(ticker => {
+                const stock = allStocks.find(s => s.ticker === ticker);
+                const quantity = userPortfolio[ticker];
+                if (stock && quantity > 0) {
+                    totalCurrentValue += quantity * stock.currentPrice;
+                }
+            });
+
+            const dayPL = totalCurrentValue - baseHoldingsValue;
+            const dayPLPercent = baseHoldingsValue > 0 ? (dayPL / baseHoldingsValue) * 100 : 0.00;
+
+            quickCashBalanceEl.textContent = `₹${formatRupee(userCash)}`;
+            quickHoldingsValueEl.textContent = `₹${formatRupee(totalCurrentValue)}`;
+
+            quickDayPLEl.textContent = `₹${formatRupee(dayPL)} (${dayPLPercent.toFixed(2)}%)`;
+            quickDayPLEl.className = `font-bold ${getPNLClass(dayPL)}`;
+
+            return totalCurrentValue;
+        }
+
+        function updatePortfolioUI() {
+            const currentHoldingsValue = calculateAndRenderQuickSummary();
+
+            userCashSummaryEl.textContent = formatRupee(userCash);
+
+            if (selectedStock) {
+                const ticker = selectedStock.ticker;
+                const shares = userPortfolio[ticker] || 0;
+                userSharesEl.textContent = shares;
+
+                const avgCost = getAverageCost(ticker);
+                averageCostEl.textContent = shares > 0 ? `₹${formatRupee(avgCost)}` : 'N/A';
+
+            } else {
+                userSharesEl.textContent = 0;
+                averageCostEl.textContent = 'N/A';
+            }
+            checkBuyPossibility();
+            renderPortfolioSummary(currentHoldingsValue);
+        }
+
+        function renderTopGainerLosers(stocks) {
+            topGainersList.innerHTML = '';
+            topLosersList.innerHTML = '';
+
+            if (stocks.length === 0) {
+                topGainersList.innerHTML = '<p class="text-xs text-gray-500">No data</p>';
+                topLosersList.innerHTML = '<p class="text-xs text-gray-500">No data</p>';
+                return;
+            }
+
+            const sortedStocks = [...stocks].sort((a, b) => b.changePercent - a.changePercent);
+
+            const gainers = sortedStocks.slice(0, 3);
+            gainers.forEach(stock => {
+                const priceChangeClass = stock.change >= 0 ? 'text-green-600' : 'text-red-600';
+                topGainersList.innerHTML += `
+                    <p class="text-xs flex justify-between">
+                        <span class="font-semibold">${stock.ticker}</span>
+                        <span class="${priceChangeClass}">${stock.changePercent.toFixed(2)}%</span>
+                    </p>
+                `;
+            });
+
+            const losers = sortedStocks.slice(-3).reverse();
+            losers.forEach(stock => {
+                const priceChangeClass = stock.change >= 0 ? 'text-green-600' : 'text-red-600';
+                topLosersList.innerHTML += `
+                    <p class="text-xs flex justify-between">
+                        <span class="font-semibold">${stock.ticker}</span>
+                        <span class="${priceChangeClass}">${stock.changePercent.toFixed(2)}%</span>
+                    </p>
+                `;
+            });
+        }
+
+
+        function renderTransactionHistory() {
+            transactionHistoryEl.innerHTML = '';
+            if (transactionLog.length === 0) {
+                transactionHistoryEl.innerHTML = '<p class="text-center text-gray-400">No transactions recorded.</p>';
+                return;
+            }
+
+            const lastTen = transactionLog.slice(-10).reverse();
+
+            lastTen.forEach(tx => {
+                const typeClass = tx.type === 'BUY' ? 'bg-green-100 text-green-700' : (tx.type === 'SELL' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700');
+                let actionText;
+
+                if (tx.type === 'DEPOSIT') {
+                    actionText = `Deposited ₹${formatRupee(tx.quantity)}`;
+                } else if (tx.type === 'SELL' && tx.profitLoss !== undefined) {
+                    const plClass = getPNLClass(tx.profitLoss);
+                    const plSign = tx.profitLoss >= 0 ? 'Profit' : 'Loss';
+                    actionText = `Sold ${tx.quantity} ${tx.ticker} @ ₹${formatRupee(tx.price)}. **${plSign}:** <span class="font-bold ${plClass}">₹${formatRupee(Math.abs(tx.profitLoss))}</span>`;
+                } else {
+                    actionText = `${tx.type} ${tx.quantity} ${tx.ticker} @ ₹${formatRupee(tx.price)}`;
+                }
+
+                const item = document.createElement('div');
+                item.classList.add('transaction-item', 'text-xs');
+                item.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="font-semibold px-2 py-0.5 rounded ${typeClass}">${tx.type}</span>
+                        <span class="text-gray-500">${tx.time}</span>
+                    </div>
+                    <p class="mt-1">${actionText}</p>
+                `;
+                transactionHistoryEl.appendChild(item);
+            });
+        }
+
+        function renderPortfolioSummary(totalCurrentValueFromQuickSummary) {
+            const totalCurrentValue = totalCurrentValueFromQuickSummary || calculateAndRenderQuickSummary();
+
+            portfolioHoldingsEl.innerHTML = '';
+            const ownedTickers = Object.keys(userPortfolio).filter(ticker => userPortfolio[ticker] > 0);
+
+            let totalInvestedCost = 0;
+
+            if (ownedTickers.length === 0) {
+                portfolioHoldingsEl.innerHTML = '<p class="text-center text-gray-400 mt-4">No stocks held yet. Buy a stock to see it here.</p>';
+                totalHoldingsValueEl.textContent = formatRupee(0);
+                netPlEl.textContent = '₹0.00 (0.00%)';
+                netPlEl.classList.remove('text-green-500', 'text-red-500');
+                return;
+            }
+
+            ownedTickers.forEach(ticker => {
+                const stock = allStocks.find(s => s.ticker === ticker);
+                const quantity = userPortfolio[ticker];
+
+                if (stock) {
+                    const costBasis = getAverageCost(ticker);
+
+                    const currentValue = quantity * stock.currentPrice;
+                    const investedCost = quantity * costBasis;
+
+                    const unrealizedPL = currentValue - investedCost;
+                    const unrealizedPLPercent = investedCost > 0 ? (unrealizedPL / investedCost) * 100 : 0;
+
+                    totalInvestedCost += investedCost;
+
+                    const plClass = getPNLClass(unrealizedPL);
+                    const plIcon = unrealizedPL >= 0 ? '▲' : '▼';
+
+                    portfolioHoldingsEl.innerHTML += `
+                        <div class="portfolio-item hover:bg-gray-50 transition duration-150 ease-in-out">
+                            <div class="flex flex-col">
+                                <span class="font-semibold text-gray-800">${stock.ticker}</span>
+                                <span class="text-xs text-gray-500">${stock.company}</span>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm font-bold">Shares: ${quantity}</p>
+                                <p class="text-xs text-gray-600">Avg Cost: ₹${formatRupee(costBasis)}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm ${plClass} font-bold">${plIcon} ₹${formatRupee(Math.abs(unrealizedPL))}</p>
+                                <p class="text-xs ${plClass}">${unrealizedPLPercent.toFixed(2)}%</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            const realizedPL = transactionLog
+                .filter(tx => tx.type === 'SELL' && tx.profitLoss !== undefined)
+                .reduce((sum, tx) => sum + tx.profitLoss, 0);
+
+            const netPL = (totalCurrentValue - totalInvestedCost) + realizedPL;
+
+            const totalPortfolioValue = userCash + totalCurrentValue;
+            const totalInvestment = 100000.00;
+            const netReturn = totalPortfolioValue - totalInvestment;
+            const netReturnPercent = (netReturn / totalInvestment) * 100;
+
+            totalHoldingsValueEl.textContent = formatRupee(totalCurrentValue);
+            netPlEl.textContent = `₹${formatRupee(netReturn)} (${netReturnPercent.toFixed(2)}%)`;
+            netPlEl.className = `font-bold ${getPNLClass(netReturn)}`;
+
+            renderTransactionHistory();
+        }
+
+        function toggleLoading(isLoading) {
+            if (isLoading) {
+                loadingSpinner.classList.remove('hidden');
+                fetchDataBtn.disabled = true;
+                startDashboardBtn.disabled = true;
+                startDashboardBtn.textContent = 'Loading...';
+            } else {
+                loadingSpinner.classList.add('hidden');
+                fetchDataBtn.disabled = false;
+                startDashboardBtn.disabled = false;
+                startDashboardBtn.textContent = 'Fetch Stocks & Start Dashboard';
+            }
+        }
+
+        function highlightStockItem(ticker) {
+            document.querySelectorAll('.stock-item').forEach(item => {
+                item.classList.remove('selected');
+                if (item.getAttribute('data-ticker') === ticker) {
+                    item.classList.add('selected');
+                }
+            });
+        }
+
+
+        function renderStockList(stocks) {
+            stockListContainer.innerHTML = '';
+
+            if (stocks.length === 0) {
+                stockListContainer.innerHTML = `<p class="text-center text-gray-500 mt-10">No stocks found matching the filter.</p>`;
+                return;
+            }
+
+            renderTopGainerLosers(allStocks);
+
+
+            stocks.forEach(stock => {
+                const priceChangeClass = stock.change >= 0 ? 'text-green-500' : 'text-red-500';
+                const changeIcon = stock.change >= 0 ? '▲' : '▼';
+                const isFavorite = favoriteStocks.includes(stock.ticker);
+
+                const stockItemWrapper = document.createElement('div');
+                stockItemWrapper.classList.add('stock-item');
+                stockItemWrapper.setAttribute('data-ticker', stock.ticker);
+
+                if (selectedStock && selectedStock.ticker === stock.ticker) {
+                    stockItemWrapper.classList.add('selected');
+                }
+
+                stockItemWrapper.innerHTML = `
+                <div class="flex items-center w-full">
+                    <div class="flex-grow">
+                        <p class="text-sm font-semibold text-gray-800">${stock.company}</p>
+                        <p class="text-xs text-gray-500">${stock.ticker}</p>
+                    </div>
+
+                    <div class="text-right flex-shrink-0 mr-2">
+                        <p class="text-sm font-semibold text-gray-800">₹${formatRupee(stock.currentPrice)}</p>
+                        <p class="text-xs ${priceChangeClass} font-medium">
+                            ${changeIcon} ${stock.change.toFixed(2)} (${stock.changePercent.toFixed(2)}%)
+                        </p>
+                    </div>
+                </div>
+                <span class="favorite-btn ${isFavorite ? 'is-favorite' : ''}" data-ticker="${stock.ticker}">
+                    ★
+                </span>
+                `;
+
+                const mainContent = stockItemWrapper.querySelector('.flex.items-center.w-full');
+
+                mainContent.addEventListener('click', () => {
+                    selectedStock = stock;
+                    highlightStockItem(stock.ticker);
+                    displayStockDetails(stock);
+                });
+
+                const favoriteButton = stockItemWrapper.querySelector('.favorite-btn');
+                favoriteButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleFavorite(stock.ticker);
+                    favoriteButton.classList.toggle('is-favorite');
+                });
+
+                stockListContainer.appendChild(stockItemWrapper);
+            });
+        }
+
+        function updatePriceVisual(stock) {
+            const low = parseFloat(stock.low52Week);
+            const high = parseFloat(stock.high52Week);
+            const current = stock.currentPrice;
+            const range = high - low;
+
+            low52WeekDisplayEl.textContent = `Low: ₹${formatRupee(low)}`;
+            high52WeekDisplayEl.textContent = `High: ₹${formatRupee(high)}`;
+
+            if (range <= 0) {
+                pricePositionEl.style.width = '0%';
+                currentPriceDotEl.style.left = '0%';
+                return;
+            }
+
+            const positionPercent = ((current - low) / range) * 100;
+
+            pricePositionEl.style.width = `${Math.min(100, Math.max(0, positionPercent))}%`;
+            currentPriceDotEl.style.left = `${Math.min(100, Math.max(0, positionPercent))}%`;
+        }
+
+        function updateVolumeBar(stock) {
+            const totalVolume = parseFloat(stock.volume.replace(/,/g, ''));
+            const buyVolumeRatio = Math.random() * 0.4 + 0.3;
+            const buyVolume = Math.floor(totalVolume * buyVolumeRatio);
+            const sellVolume = Math.floor(totalVolume * (1 - buyVolumeRatio));
+
+            const buyPercent = (buyVolume / totalVolume) * 100;
+
+            volumeBarEl.innerHTML = `
+                <div class="bg-green-500 h-full" style="width: ${buyPercent}%;"></div>
+                <div class="bg-red-500 h-full" style="width: ${100 - buyPercent}%;"></div>
+            `;
+
+            buyVolumeLabelEl.textContent = `Buy: ${buyVolume.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+            sellVolumeLabelEl.textContent = `Sell: ${sellVolume.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+        }
+
+        function renderTechnicalSnapshot(stock) {
+            const rsiValue = parseFloat((Math.random() * 50) + 20).toFixed(2);
+            const macdTrend = ['Bullish Divergence (Buy)', 'Bearish Crossover (Sell)', 'Neutral/Consolidation'][Math.floor(Math.random() * 3)];
+            const atrValue = (stock.currentPrice * 0.015 + (Math.random() * stock.currentPrice * 0.005)).toFixed(2);
+
+            let rsiClass = 'bg-gray-200 text-gray-800';
+            if (rsiValue < 30) rsiClass = 'bg-green-100 text-green-700';
+            else if (rsiValue > 70) rsiClass = 'bg-red-100 text-red-700';
+
+            let macdClass = 'bg-gray-200 text-gray-800';
+            if (macdTrend.includes('Buy')) macdClass = 'bg-green-100 text-green-700';
+            else if (macdTrend.includes('Sell')) macdClass = 'bg-red-100 text-red-700';
+
+            indicatorRSIEl.textContent = rsiValue;
+            indicatorRSIEl.className = `indicator-pill ${rsiClass}`;
+
+            indicatorMACDEl.textContent = macdTrend.split(' ')[0];
+            indicatorMACDEl.className = `indicator-pill ${macdClass}`;
+
+            indicatorATREl.textContent = `₹${formatRupee(atrValue)}`;
+            indicatorATREl.className = 'indicator-pill bg-gray-200 text-gray-800';
+        }
+
+        function renderFakeGraph(data, isPositive) {
+            fakeGraphContainerEl.innerHTML = '';
+
+            const lineColor = isPositive ? '#10b981' : '#ef4444';
+            const points = data.map(d => d.y);
+            const minPrice = Math.min(...points);
+            const maxPrice = Math.max(...points);
+            const range = maxPrice - minPrice;
+            const height = 250;
+            const width = fakeGraphContainerEl.clientWidth;
+
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute('width', width);
+            svg.setAttribute('height', height);
+            svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            svg.style.position = 'absolute';
+            svg.style.top = '0';
+            svg.style.left = '0';
+
+            const linePoints = points.map((y, i) => {
+                const x = (i / (points.length - 1)) * width;
+                const yNormalized = range > 0 ? (y - minPrice) / range : 0.5;
+                const svgY = height - (yNormalized * (height * 0.8) + height * 0.1);
+
+                return `${x},${svgY}`;
+            }).join(' ');
+
+            const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+            polyline.setAttribute('points', linePoints);
+            polyline.setAttribute('fill', 'none');
+            polyline.setAttribute('stroke', lineColor);
+            polyline.setAttribute('stroke-width', '2');
+
+            svg.appendChild(polyline);
+            fakeGraphContainerEl.appendChild(svg);
+
+            const lastPoint = linePoints.split(' ').slice(-1)[0].split(',');
+            const dot = document.createElement('div');
+            dot.className = 'graph-dot';
+            dot.style.backgroundColor = lineColor;
+            dot.style.top = `${lastPoint[1]}px`;
+            dot.style.left = `${lastPoint[0]}px`;
+            fakeGraphContainerEl.appendChild(dot);
+        }
+
+        function renderMarketIndexSnapshot() {
+            Object.keys(marketIndices).forEach(key => {
+                const index = marketIndices[key];
+                const valueEl = document.getElementById(`${key.toLowerCase()}-value`);
+                const changeEl = document.getElementById(`${key.toLowerCase()}-change`);
+
+                const changeClass = getPNLClass(index.change);
+                const changeIcon = index.change >= 0 ? '▲' : '▼';
+
+                if (valueEl && changeEl) {
+                    valueEl.textContent = formatRupee(index.value);
+                    changeEl.innerHTML = `<span class="${changeClass} font-semibold">${changeIcon} ${index.change.toFixed(2)} (${index.changePercent.toFixed(2)}%)</span>`;
+                }
+            });
+        }
+
+        function updateMarketIndices() {
+            Object.keys(marketIndices).forEach(key => {
+                const base = indexBaseValues[key];
+                const change = (Math.random() - 0.5) * (marketIndices[key].value * 0.005 * 0.2);
+
+                const newPrice = marketIndices[key].value + change;
+                const priceChange = newPrice - marketIndices[key].value;
+                const changePercent = (priceChange / marketIndices[key].value) * 100;
+
+                marketIndices[key].value = parseFloat(newPrice.toFixed(2));
+                marketIndices[key].change = parseFloat(priceChange.toFixed(2));
+                marketIndices[key].changePercent = parseFloat(changePercent.toFixed(2));
+            });
+            renderMarketIndexSnapshot();
+        }
+
+
+        function displayStockDetails(stock) {
+            defaultDetailMessage.classList.add('hidden');
+            stockContent.classList.remove('hidden');
+
+            stockNameHeaderEl.textContent = stock.company;
+            tickerHeaderEl.textContent = stock.ticker;
+            currentPriceEl.textContent = formatRupee(stock.currentPrice);
+            priceChangeEl.textContent = `${stock.change.toFixed(2)} (${stock.changePercent.toFixed(2)}%)`;
+
+            priceChangeEl.classList.remove('text-green-500', 'text-red-500', 'text-gray-600');
+            priceChangeEl.classList.add(stock.change > 0 ? 'text-green-500' : (stock.change < 0 ? 'text-red-500' : 'text-gray-600'));
+
+            marketCapEl.textContent = stock.marketCap;
+            volumeEl.textContent = stock.volume;
+            peRatioEl.textContent = stock.peRatio;
+            epsEl.textContent = stock.eps;
+            dividendYieldEl.textContent = stock.dividendYield;
+            betaEl.textContent = stock.beta;
+
+            updatePriceVisual(stock);
+            updateVolumeBar(stock);
+
+            tradingPanelEl.classList.remove('hidden');
+            tradeTickerEl.textContent = stock.ticker;
+
+            updatePortfolioUI();
+
+            renderTechnicalSnapshot(stock);
+
+            const isPositive = stock.change > 0;
+            renderFakeGraph(stock.historicalData, isPositive);
+
+            const analysis = getAnalysis(stock.historicalData);
+            analysisTextEl.innerHTML = analysis;
+        }
+
+
+        function checkBuyPossibility() {
+            if (!selectedStock) return;
+
+            const quantity = parseInt(tradeQuantityInput.value) || 0;
+            const price = selectedStock.currentPrice;
+            const cost = quantity * price;
+
+            tradeMessageEl.textContent = '';
+            tradeMessageEl.style.color = '#374151';
+
+            if (quantity <= 0) {
+                tradeMessageEl.textContent = 'Enter a quantity greater than 0 to trade.';
+                return;
+            }
+
+            if (cost > userCash) {
+                const deficit = cost - userCash;
+                const maxShares = Math.floor(userCash / price);
+
+                tradeMessageEl.textContent = `❌ Insufficient Funds! Need ₹${formatRupee(deficit)} more to buy ${quantity} shares.`;
+                tradeMessageEl.style.color = '#ef4444';
+
+                if (maxShares > 0) {
+                    const maxSharesCost = maxShares * price;
+                    tradeMessageEl.innerHTML += `<br>You can buy a **maximum of ${maxShares} shares** for ₹${formatRupee(maxSharesCost)}.`;
+                } else {
+                    tradeMessageEl.innerHTML += `<br>Cannot buy any shares with current cash (₹${formatRupee(userCash)}).`;
+                }
+
+            } else {
+                tradeMessageEl.textContent = `✅ Est. Cost for ${quantity} shares: ₹${formatRupee(cost)}. Remaining Cash: ₹${formatRupee(userCash - cost)}.`;
+                tradeMessageEl.style.color = '#10b981';
+            }
+
+            const currentShares = userPortfolio[selectedStock.ticker] || 0;
+            if (currentShares === 0) {
+                tradeMessageEl.innerHTML += `<br><span class="text-yellow-600">⚠️ SELL Error: You hold 0 shares of ${selectedStock.ticker}.</span>`;
+            } else if (quantity > currentShares) {
+                tradeMessageEl.innerHTML += `<br><span class="text-yellow-600">⚠️ SELL Error: You only hold ${currentShares} shares.</span>`;
+            }
+        }
+
+
+        function getAnalysis(historicalData) {
+            if (!selectedStock) return "No data available for analysis.";
+
+            const prices = historicalData.map(d => d.y);
+            const latestPrice = selectedStock.currentPrice;
+            const initialPrice = prices[0];
+            const latestVsInitial = (latestPrice - initialPrice) / initialPrice * 100;
+
+            const averagePrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+            const volatility = Math.sqrt(prices.map(p => (p - averagePrice) ** 2).reduce((a, b) => a + b, 0) / prices.length);
+
+            const supportLevel = (latestPrice * 0.95 + (Math.random() * latestPrice * 0.02)).toFixed(2);
+            const resistanceLevel = (latestPrice * 1.05 - (Math.random() * latestPrice * 0.02)).toFixed(2);
+
+            let trend = 'neutral/sideways trend (Hold)';
+            if (latestVsInitial > 5) {
+                trend = 'strong upward trend (Strong Buy Signal)';
+            } else if (latestVsInitial > 0.5) {
+                trend = 'slight upward trend (Buy Signal)';
+            } else if (latestVsInitial < -5) {
+                trend = 'strong downward trend (Strong Sell Signal)';
+            } else if (latestVsInitial < -0.5) {
+                trend = 'slight downward trend (Sell Signal)';
+            }
+
+            return `
+            <p><strong>Overall Trend:</strong> Based on the last 6 months, the stock shows a <strong>${trend}</strong>. The current price is ${latestVsInitial.toFixed(2)}% ${latestVsInitial >= 0 ? 'above' : 'below'} its starting price.</p>
+            <p class="mt-2"><strong>Volatility (Risk):</strong> The stock's price exhibits a standard deviation of ₹${volatility.toFixed(2)}, suggesting a ${volatility > 50 ? 'high-risk' : 'moderate-risk'} profile for traders.</p>
+            <p class="mt-2"><strong>Key Levels:</strong> Nearest **Support** is found at **₹${formatRupee(supportLevel)}** and **Resistance** at **₹${formatRupee(resistanceLevel)}**.</p>
+        `;
+        }
+
+        function showTradeReceipt(message, isBuy) {
+            const background = isBuy ? '#10b981' : '#ef4444';
+            tradeReceiptToast.style.backgroundColor = background;
+            tradeReceiptToast.innerHTML = `<span class="font-bold">${isBuy ? 'BUY CONFIRMED' : 'SELL CONFIRMED'}</span><br>${message}`;
+            tradeReceiptToast.classList.add('show');
+
+            setTimeout(() => {
+                tradeReceiptToast.classList.remove('show');
+            }, 4000);
+        }
+
+        function displayTradeMessage(message, isError = false) {
+            tradeMessageEl.textContent = message;
+            tradeMessageEl.style.color = isError ? '#ef4444' : '#10b981';
+            if (!tradeMessageEl.innerHTML.includes('Est. Cost') && !tradeMessageEl.innerHTML.includes('Insufficient Funds')) {
+                setTimeout(() => {
+                    tradeMessageEl.textContent = '';
+                }, 4000);
+            }
+        }
+
+        function handleDeposit() {
+            const amountInput = prompt("Enter the amount you wish to deposit (e.g., 5000):");
+
+            if (amountInput === null) return;
+
+            const depositAmount = parseFloat(amountInput);
+
+            if (isNaN(depositAmount) || depositAmount <= 0) {
+                return alert("Invalid amount. Please enter a valid number greater than zero.");
+            }
+
+            userCash += depositAmount;
+            logTransaction('DEPOSIT', 'CASH', depositAmount, 1, 1);
+            savePortfolio(calculateAndRenderQuickSummary());
+            updatePortfolioUI();
+
+            displayTradeMessage(`Deposited ₹${formatRupee(depositAmount)} successfully. New balance: ₹${formatRupee(userCash)}.`, false);
+
+            if (!portfolioModal.classList.contains('hidden')) {
+                renderPortfolioSummary();
+                userCashSummaryEl.textContent = formatRupee(userCash);
+            }
+        }
+
+        function handleBuy() {
+            if (!selectedStock) return;
+            const quantity = parseInt(tradeQuantityInput.value);
+            if (isNaN(quantity) || quantity <= 0) {
+                return displayTradeMessage('Please enter a valid quantity.', true);
+            }
+
+            const cost = quantity * selectedStock.currentPrice;
+
+            if (cost > userCash) {
+                checkBuyPossibility();
+                return;
+            }
+
+            userCash -= cost;
+            userPortfolio[selectedStock.ticker] = (userPortfolio[selectedStock.ticker] || 0) + quantity;
+
+            logTransaction('BUY', selectedStock.ticker, quantity, selectedStock.currentPrice, selectedStock.currentPrice);
+
+            savePortfolio(calculateAndRenderQuickSummary());
+            updatePortfolioUI();
+
+            showTradeReceipt(`${quantity} shares of ${selectedStock.ticker} bought at ₹${formatRupee(selectedStock.currentPrice)} for a total of ₹${formatRupee(cost)}.`, true);
+        }
+
+        function handleSell() {
+            if (!selectedStock) return;
+            const quantity = parseInt(tradeQuantityInput.value);
+            if (isNaN(quantity) || quantity <= 0) {
+                return displayTradeMessage('Please enter a valid quantity.', true);
+            }
+
+            const currentShares = userPortfolio[selectedStock.ticker] || 0;
+
+            if (quantity > currentShares) {
+                return displayTradeMessage(`Not enough shares! You only have ${currentShares}.`, true);
+            }
+
+            const averageCostBasis = getAverageCost(selectedStock.ticker);
+
+            const revenue = quantity * selectedStock.currentPrice;
+            const costOfGoodsSold = quantity * averageCostBasis;
+            const profitLoss = revenue - costOfGoodsSold;
+
+            userCash += revenue;
+            userPortfolio[selectedStock.ticker] -= quantity;
+
+            logTransaction('SELL', selectedStock.ticker, quantity, selectedStock.currentPrice, averageCostBasis, profitLoss);
+
+            if (userPortfolio[selectedStock.ticker] === 0) {
+                delete userPortfolio[selectedStock.ticker];
+            }
+
+            savePortfolio(calculateAndRenderQuickSummary());
+            updatePortfolioUI();
+
+            const plMessage = profitLoss >= 0 ? `Profit: ₹${formatRupee(profitLoss)}` : `Loss: ₹${formatRupee(Math.abs(profitLoss))}`;
+
+            showTradeReceipt(`${quantity} shares of ${selectedStock.ticker} sold at ₹${formatRupee(selectedStock.currentPrice)}. Realized ${plMessage}.`, false);
+        }
+
+        function handleResetData() {
+            const confirmReset = confirm("WARNING: This will delete ALL cash, holdings, and transaction history. Are you sure you want to reset?");
+            if (confirmReset) {
+                localStorage.clear();
+
+                userCash = 100000.00;
+                userPortfolio = {};
+                favoriteStocks = [];
+                transactionLog = [];
+                baseHoldingsValue = 0;
+
+                savePortfolio(0);
+                updatePortfolioUI();
+                applyFilter(false);
+                closePortfolioModal();
+                displayTradeMessage("All data has been reset. Starting fresh with ₹1,00,000.00.", false);
+            }
+        }
+
+        function openPortfolioModal() {
+            renderTransactionHistory();
+            renderPortfolioSummary();
+            userCashSummaryEl.textContent = formatRupee(userCash);
+            portfolioModal.classList.remove('hidden');
+        }
+
+        function closePortfolioModal() {
+            portfolioModal.classList.add('hidden');
+        }
+
+        function startLivePriceSimulation() {
+            if (priceSimulationInterval) clearInterval(priceSimulationInterval);
+
+            priceSimulationInterval = setInterval(() => {
+                if (allStocks.length === 0) return;
+
+                let needsDetailReRender = false;
+                let portfolioUpdateNeeded = false;
+
+                updateMarketIndices();
+
+                allStocks.forEach(stock => {
+                    const priceChange = (Math.random() - 0.5) * (stock.startOfDayPrice * 0.01);
+                    const newPrice = stock.currentPrice + priceChange;
+
+                    const change = newPrice - stock.currentPrice;
+                    const changePercent = change / stock.currentPrice * 100;
+
+                    if (Object.keys(userPortfolio).includes(stock.ticker) && Math.abs(change) > 0.01) {
+                        portfolioUpdateNeeded = true;
+                    }
+
+                    stock.currentPrice = parseFloat(newPrice.toFixed(2));
+                    stock.change = parseFloat(change.toFixed(2));
+                    stock.changePercent = parseFloat(changePercent.toFixed(2));
+
+                    if (selectedStock && selectedStock.ticker === stock.ticker) {
+                        selectedStock = stock;
+                        needsDetailReRender = true;
+                    }
+                });
+
+                applyFilter(isFavoriteViewActive);
+
+                if (needsDetailReRender) {
+                    displayStockDetails(selectedStock);
+                    checkBuyPossibility();
+                }
+
+                if (portfolioUpdateNeeded) {
+                    savePortfolio(calculateAndRenderQuickSummary());
+                    updatePortfolioUI();
+                }
+
+            }, LIVE_UPDATE_INTERVAL);
+        }
+
+        let isFavoriteViewActive = false;
+
+        function handleViewFavorites() {
+            isFavoriteViewActive = !isFavoriteViewActive;
+
+            viewFavoritesBtn.classList.toggle('bg-gray-500', isFavoriteViewActive);
+            viewFavoritesBtn.classList.toggle('bg-yellow-600', !isFavoriteViewActive);
+            viewFavoritesBtn.textContent = isFavoriteViewActive ? '❌ View All Stocks' : '⭐ View Favorites';
+
+            applyFilter(isFavoriteViewActive);
+        }
+
+        function handleDataFetchAndStart() {
+            if (allStocks.length > 0) {
+                switchView('dashboard');
+                applyFilter();
+                return;
+            }
+
+            toggleLoading(true);
+            stockListContainer.innerHTML = '';
+
+            setTimeout(() => {
+                allStocks = generateMockStockList(TOTAL_STOCKS);
+                renderStockList(allStocks);
+                toggleLoading(false);
+                fetchDataBtn.textContent = 'Fetch Top 500 Stocks';
+
+                if (allStocks.length > 0) {
+                    startLivePriceSimulation();
+                    switchView('dashboard');
+
+                    selectedStock = allStocks[0];
+                    highlightStockItem(selectedStock.ticker);
+                    displayStockDetails(selectedStock);
+
+                    baseHoldingsValue = calculateAndRenderQuickSummary();
+                    savePortfolio(baseHoldingsValue);
+                }
+            }, 1500);
+        }
+
+        function applyFilter(showFavorites = isFavoriteViewActive) {
+            const filterText = tickerInput.value.toLowerCase();
+            let filteredStocks = allStocks.filter(stock =>
+                stock.ticker.toLowerCase().includes(filterText) ||
+                stock.company.toLowerCase().includes(filterText)
+            );
+
+            if (showFavorites) {
+                filteredStocks = filteredStocks.filter(stock => favoriteStocks.includes(stock.ticker));
+            }
+
+            renderStockList(filteredStocks);
+
+            if (selectedStock && !filteredStocks.find(s => s.ticker === selectedStock.ticker)) {
+                highlightStockItem(selectedStock.ticker);
+            }
+        }
+
+        startDashboardBtn.addEventListener('click', handleDataFetchAndStart);
+        fetchDataBtn.addEventListener('click', handleDataFetchAndStart);
+        tickerInput.addEventListener('input', () => applyFilter(isFavoriteViewActive));
+
+        viewFavoritesBtn.addEventListener('click', handleViewFavorites);
+
+        buyBtn.addEventListener('click', handleBuy);
+        sellBtn.addEventListener('click', handleSell);
+
+        tradeQuantityInput.addEventListener('input', checkBuyPossibility);
+
+        depositBtnSummary.addEventListener('click', handleDeposit);
+        openPortfolioBtn.addEventListener('click', openPortfolioModal);
+        closePortfolioBtn.addEventListener('click', closePortfolioModal);
+        resetDataBtn.addEventListener('click', handleResetData);
+        portfolioModal.addEventListener('click', (e) => {
+            if (e.target === portfolioModal) {
+                closePortfolioModal();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPortfolio();
+            renderMarketIndexSnapshot();
+            updatePortfolioUI();
+            switchView('welcome');
+        });
+    </script>
+
+</body>
+
+</html>
