@@ -65,7 +65,7 @@ def fetch_single_ticker(symbol):
     except: return None
 
 @app.route('/')
-def home(): return render_template('Dashboard.html')
+def home(): return render_template('index.html')
 
 @app.route('/api/market_data')
 def get_market_data():
